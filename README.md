@@ -1,6 +1,8 @@
 # CS346 Project
 
+Project Proposal: https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Project-Proposal
 
+---
 
 ## Getting started
 
