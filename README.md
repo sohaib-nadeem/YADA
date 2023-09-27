@@ -1,8 +1,17 @@
-# CS346 Project
+## Description
 
+## Team Members
+Akshita Choudhury (a49choud@uwaterloo.ca),
+David Mo (d7mo@uwaterloo.ca),
+Sirius Hou (y45hou@uwaterloo.ca),
+Sohaib Nadeem (s26nadee@uwaterloo.ca),
+
+## Installation
+
+## Project Links
 Project Proposal: https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Project-Proposal
 
----
+
 
 ## Getting started
 
