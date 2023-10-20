@@ -133,7 +133,10 @@ hs_err_pid*
 *.apk
 *.ap_
 *.aab
-*.apks 
+*.apks
+
+# Exclude builds in releases
+!releases/*.apk
 
 # Files for the Dalvik VM
 *.dex
