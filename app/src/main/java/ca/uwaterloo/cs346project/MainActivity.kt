@@ -32,7 +32,10 @@ import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material.icons.filled.LineWeight
+import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.ui.graphics.RectangleShape
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -46,40 +49,40 @@ data class Line (
     val strokeWidth: Dp
 )
 
-// Pen attributes
-data class Pen (
+// Contains attributes for pen and eraser as well as the drawing mode
+data class DrawInfo (
+    val drawMode: DrawMode = DrawMode.Pen,
     val color: Color = Color.Black,
     val strokeWidth: Float = 2f
 )
 
-// Eraser attributes
-data class Eraser (
-    val active: Boolean = false,
-    val strokeWidth: Float = 6f
-)
-
 const val MAX_STROKE_WIDTH = 140f
+
+enum class DrawMode { Pen, Eraser, Shape, LineWeight, ColorPicker }
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
-            val pen = remember { mutableStateOf(Pen()) }
-            var eraser by remember { mutableStateOf(Eraser()) }
+            var drawInfo by remember { mutableStateOf(DrawInfo()) }
 
             CS346ProjectTheme {
-                Column() {
+                Box() {
+                    Row(modifier = Modifier
+                        .fillMaxSize()
+                        .align(Alignment.TopCenter)
+
+                    ) {
+                        Whiteboard(drawInfo)
+                    }
+
                     Row(modifier = Modifier
                         .fillMaxWidth()
-                        .fillMaxHeight(0.9f)
+                        .align(Alignment.BottomCenter)
                     ) {
-                        Whiteboard(pen.value, eraser)
+                        Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it })
                     }
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                    ) {
-                        Toolbar(pen = pen.value, setPen = { pen.value = it }, eraser, { eraser = it })
-                    }
+
                     //println(pen.value.strokeWidth.toString())
                 }
             }
@@ -88,28 +91,28 @@ class MainActivity : ComponentActivity() {
 }
 
 @Composable
-fun Whiteboard(pen: Pen, eraser: Eraser) {
+fun Whiteboard(drawInfo: DrawInfo) {
     val lines = remember { mutableStateListOf<Line>() }
-    val canvasColor = MaterialTheme.colorScheme.background
-    var cachedEraser by remember { mutableStateOf(Eraser()) }
-    cachedEraser = eraser
-    val cachedPen = remember { mutableStateOf(Pen()) } // why do we even need to do this???
-    cachedPen.value = pen
+    val canvasColor = Color.White
+    var cachedDrawInfo by remember { mutableStateOf(DrawInfo()) }
+    cachedDrawInfo = drawInfo
 
     Canvas(modifier = Modifier
         .fillMaxSize()
         .background(canvasColor) // Default: White
         .pointerInput(Unit) {
             detectDragGestures(onDrag = { change, dragAmount ->
-                change.consume()
-                val line = Line(
-                    start = change.position - dragAmount,
-                    end = change.position,
-                    color = if (cachedEraser.active) canvasColor else cachedPen.value.color,
-                    strokeWidth = if (cachedEraser.active) cachedEraser.strokeWidth.dp else cachedPen.value.strokeWidth.dp
-                )
+                if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Eraser) {
+                    change.consume()
+                    val line = Line(
+                        start = change.position - dragAmount,
+                        end = change.position,
+                        color = if (cachedDrawInfo.drawMode == DrawMode.Pen) cachedDrawInfo.color else canvasColor,
+                        strokeWidth = cachedDrawInfo.strokeWidth.dp
+                    )
 
-                lines.add(line)
+                    lines.add(line)
+                }
             })
         }
     ) {
@@ -140,27 +143,87 @@ fun EraserToggleButton(eraserActive: Boolean, onToggle: () -> Unit) {
 }
 
 @Composable
-fun Toolbar(pen: Pen, setPen: (Pen) -> Unit, eraser: Eraser, setEraser: (Eraser) -> Unit) {
-    var penThicknessSliderOn = remember { mutableStateOf(false) }
-    Row(modifier = Modifier
-        .fillMaxSize()
-        .background(MaterialTheme.colorScheme.primaryContainer),
-        verticalAlignment = Alignment.CenterVertically
+fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
+    Column(modifier = Modifier
+        .background(MaterialTheme.colorScheme.secondaryContainer)
     ) {
-        //Spacer(Modifier.weight(1f, true))
+        if (drawInfo.drawMode == DrawMode.LineWeight || drawInfo.drawMode == DrawMode.ColorPicker) {
+            Row(
+                modifier = Modifier
+                    .background(MaterialTheme.colorScheme.secondaryContainer)
+                    .fillMaxWidth(),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceEvenly
+            ) {
+                if (drawInfo.drawMode == DrawMode.LineWeight) {
+                    Slider(
+                        value = drawInfo.strokeWidth,
+                        onValueChange = {
+                            setDrawInfo(drawInfo.copy(strokeWidth = it))
+                        },
+                        valueRange = 1f..MAX_STROKE_WIDTH
+                    )
+                }
 
-        IconButton(onClick = { penThicknessSliderOn.value = !penThicknessSliderOn.value }) {
-            Icon(Icons.Filled.Create, contentDescription = "Localized description")
-        }
-        if (penThicknessSliderOn.value) {
-            Slider(value = pen.strokeWidth, onValueChange = { setPen(Pen(pen.color, it)) }, valueRange = 1f..MAX_STROKE_WIDTH)
+                // penColorOn.value
+                if (drawInfo.drawMode == DrawMode.ColorPicker) {
+                    val colors = listOf<Color>(Color.Black, Color.Gray, Color.Red,
+                            Color.Yellow, Color.Green, Color.Blue, Color.Cyan, Color.Magenta)
+                    colors.forEach { color ->
+                        Button(
+                            onClick = { setDrawInfo(drawInfo.copy(color = color)) },
+                            shape = CircleShape,
+                            colors = ButtonDefaults.buttonColors(color),
+                            modifier = Modifier.size(25.dp)
+                        ) {}
+                    }
+                }
+            }
         }
 
-        EraserToggleButton(eraser.active) {
-            setEraser(Eraser(!eraser.active, eraser.strokeWidth))
-        }
-        if (eraser.active) {
-            Slider(value = eraser.strokeWidth, onValueChange = { setEraser(Eraser(eraser.active, it)) }, valueRange = 1f..MAX_STROKE_WIDTH)
+        Row(
+            modifier = Modifier
+                .background(MaterialTheme.colorScheme.primaryContainer)
+                .fillMaxWidth(),
+            horizontalArrangement = Arrangement.SpaceEvenly,
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            //Spacer(Modifier.weight(1f, true))
+            IconButton(
+                onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.Pen)) }
+            ) {
+                Icon(Icons.Filled.Create, contentDescription = "Localized description", modifier = Modifier
+                    .background(
+                        color = if (drawInfo.drawMode == DrawMode.Pen) Color.LightGray else MaterialTheme.colorScheme.primaryContainer,
+                        shape = CircleShape,
+                    )
+                    .padding(5.dp)
+                )
+            }
+
+            EraserToggleButton(drawInfo.drawMode == DrawMode.Eraser) {
+                setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser))
+            }
+
+            IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.LineWeight)) }) {
+                Icon(Icons.Filled.LineWeight, contentDescription = "Localized description", modifier = Modifier
+                    .background(
+                        color = if (drawInfo.drawMode == DrawMode.LineWeight) Color.LightGray else MaterialTheme.colorScheme.primaryContainer,
+                        shape = CircleShape,
+                    )
+                    .padding(5.dp)
+                )
+            }
+
+            IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.ColorPicker)) }) {
+                Icon(Icons.Filled.Palette, contentDescription = "Localized description", modifier = Modifier
+                    .background(
+                        color = if (drawInfo.drawMode == DrawMode.ColorPicker) Color.LightGray else MaterialTheme.colorScheme.primaryContainer,
+                        shape = CircleShape,
+                    )
+                    .padding(5.dp)
+                )
+            }
         }
     }
 }
