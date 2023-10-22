@@ -1,6 +1,4 @@
 package ca.uwaterloo.cs346project
-import android.annotation.SuppressLint
-import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -216,68 +214,75 @@ fun Whiteboard(drawInfo: DrawInfo) {
         }
     ) {
         drawnItems.forEach { item ->
-            if (item.shape == Shape.Line || item.shape == Shape.StraightLine) {
-                drawLine(
-                    color = item.color,
-                    start = item.start,
-                    end = item.end,
-                    strokeWidth = item.strokeWidth,
-                    cap = StrokeCap.Round
-                )
-            } else if (item.shape == Shape.Rectangle) {
-                drawRect(
-                    color = item.color,
-                    topLeft = item.start,
-                    size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
-                    style = Stroke(
-                        width = item.strokeWidth
+            when (item.shape) {
+                Shape.Line, Shape.StraightLine -> {
+                    drawLine(
+                        color = item.color,
+                        start = item.start,
+                        end = item.end,
+                        strokeWidth = item.strokeWidth,
+                        cap = StrokeCap.Round
                     )
-                )
-            } else if (item.shape == Shape.Oval) {
-                drawOval(
-                    color = item.color,
-                    topLeft = item.start,
-                    size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
-                    style = Stroke(
-                        width = item.strokeWidth
+                }
+                Shape.Rectangle -> {
+                    drawRect(
+                        color = item.color,
+                        topLeft = item.start,
+                        size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
+                        style = Stroke(
+                            width = item.strokeWidth
+                        )
                     )
-                )
-
+                }
+                Shape.Oval -> {
+                    drawOval(
+                        color = item.color,
+                        topLeft = item.start,
+                        size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
+                        style = Stroke(
+                            width = item.strokeWidth
+                        )
+                    )
+                }
             }
         }
 
-        if (tempItem != null) {
-            if (tempItem!!.shape == Shape.Rectangle) {
-                drawRect(
-                    color = tempItem!!.color,
-                    topLeft = tempItem!!.start,
-                    size = Size(tempItem!!.end.x - tempItem!!.start.x, tempItem!!.end.y - tempItem!!.start.y),
-                    style = Stroke(
-                        width = tempItem!!.strokeWidth
+        tempItem?.let {
+            when (it.shape) {
+                Shape.Rectangle -> {
+                    drawRect(
+                        color = it.color,
+                        topLeft = it.start,
+                        size = Size(it.end.x - it.start.x, it.end.y - it.start.y),
+                        style = Stroke(
+                            width = it.strokeWidth
+                        )
                     )
-                )
-            } else if (tempItem!!.shape == Shape.Oval) {
-                drawOval(
-                    color = tempItem!!.color,
-                    topLeft = tempItem!!.start,
-                    size = Size(tempItem!!.end.x - tempItem!!.start.x, tempItem!!.end.y - tempItem!!.start.y),
-                    style = Stroke(
-                        width = tempItem!!.strokeWidth
+                }
+                Shape.Oval -> {
+                    drawOval(
+                        color = it.color,
+                        topLeft = it.start,
+                        size = Size(it.end.x - it.start.x, it.end.y - it.start.y),
+                        style = Stroke(
+                            width = it.strokeWidth
+                        )
                     )
-                )
-            } else if (tempItem!!.shape == Shape.StraightLine) {
-                drawLine(
-                    color = tempItem!!.color,
-                    start = tempItem!!.start,
-                    end = tempItem!!.end,
-                    strokeWidth = tempItem!!.strokeWidth,
-                    cap = StrokeCap.Round
-                )
+                }
+                Shape.StraightLine -> {
+                    drawLine(
+                        color = it.color,
+                        start = it.start,
+                        end = it.end,
+                        strokeWidth = it.strokeWidth,
+                        cap = StrokeCap.Round
+                    )
+                }
+                else -> Unit // Do nothing for other shapes
             }
         }
     }
 }
-
 
 
 @Composable
@@ -391,7 +396,7 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit, setting: Settin
                 if (drawInfo.drawMode == DrawMode.Eraser) {
                     setDrawInfo(drawInfo.copy(drawMode = DrawMode.NULL))
                 } else {
-                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser))
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser, shape = Shape.Line))
                 }
             }) {
                 Icon(painterResource(id = R.drawable.ink_eraser_24px), contentDescription = "Localized description", modifier = Modifier
