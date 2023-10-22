@@ -1,5 +1,6 @@
 package ca.uwaterloo.cs346project
-
+import android.annotation.SuppressLint
+import android.graphics.Bitmap
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -9,7 +10,6 @@ import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
@@ -23,6 +23,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.ui.res.painterResource
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -30,44 +31,57 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.filled.LineWeight
-import androidx.compose.material.icons.filled.Palette
+import androidx.compose.material.icons.outlined.Circle
+import androidx.compose.material.icons.outlined.Rectangle
+import androidx.compose.material.icons.outlined.ShapeLine
+import androidx.compose.material.icons.outlined.LineWeight
+import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
-import androidx.compose.ui.graphics.RectangleShape
-import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.zIndex
 import ca.uwaterloo.cs346project.ui.theme.CS346ProjectTheme
 
-// Line attributes
-data class Line (
-    val start: Offset,
-    val end: Offset,
-    val color: Color,
-    val strokeWidth: Dp
+
+data class DrawnItem(
+    val drawMode: DrawMode = DrawMode.Pen,
+    val shape: Shape = Shape.Line,
+    val color: Color = Color.Black,
+    val strokeWidth: Float = 4f,
+    val filled: Boolean = false,
+    val start: Offset = Offset(0f, 0f),
+    val end: Offset = Offset(0f, 0f)
 )
 
 // Contains attributes for pen and eraser as well as the drawing mode
 data class DrawInfo (
     val drawMode: DrawMode = DrawMode.Pen,
+    val shape: Shape = Shape.Line,
     val color: Color = Color.Black,
-    val strokeWidth: Float = 2f
+    val strokeWidth: Float = 4f
 )
 
 const val MAX_STROKE_WIDTH = 140f
 
-enum class DrawMode { Pen, Eraser, Shape, LineWeight, ColorPicker }
+enum class DrawMode { Pen, Eraser, Shape, NULL }
+
+enum class Settings { ColorPicker, LineWeight, Shape, NULL }
+
+enum class Shape { Rectangle, Oval, Line, StraightLine }
+
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setContent {
             var drawInfo by remember { mutableStateOf(DrawInfo()) }
+            var setting by remember { mutableStateOf(Settings.NULL) }
 
             CS346ProjectTheme {
-                Box() {
+                Box {
                     Row(modifier = Modifier
                         .fillMaxSize()
                         .align(Alignment.TopCenter)
@@ -80,74 +94,199 @@ class MainActivity : ComponentActivity() {
                         .fillMaxWidth()
                         .align(Alignment.BottomCenter)
                     ) {
-                        Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it })
+                        Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it },
+                            setting = setting, setSetting = { setting = it})
                     }
-
-                    //println(pen.value.strokeWidth.toString())
                 }
             }
         }
     }
 }
 
+
+
+// TESTING VERSION: Using Bitmap. (drawback: gaps between lines)
+//@Composable
+//fun Whiteboard(drawInfo: DrawInfo) {
+//    var cachedDrawInfo by remember { mutableStateOf(DrawInfo()) }
+//    cachedDrawInfo = drawInfo
+//
+//    var canvasWidth = ScreenSize.width
+//    var canvasHeight = ScreenSize.height
+//    var bitmap by remember(canvasWidth, canvasHeight) {
+//        mutableStateOf(Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888))
+//    }
+//    val path = Path()
+//
+//    Canvas(
+//        modifier = Modifier
+//            .fillMaxSize()
+//            .background(Color.White)
+//            .pointerInput(Unit) {
+//                detectDragGestures { change, _ ->
+//                    val startX = change.previousPosition.x.toInt()
+//                    val startY = change.previousPosition.y.toInt()
+//                    val endX = change.position.x.toInt()
+//                    val endY = change.position.y.toInt()
+//                    val paint = Paint().apply {
+//                        color = cachedDrawInfo.color.toArgb()
+//                        strokeWidth = cachedDrawInfo.strokeWidth
+//                    }
+//
+//                    if (startX in 0 until canvasWidth && startY in 0 until canvasHeight &&
+//                        endX in 0 until canvasWidth && endY in 0 until canvasHeight
+//                    ) {
+//
+//                        val canvas = android.graphics.Canvas(bitmap)
+//                        if (cachedDrawInfo.drawMode == DrawMode.Pen) {
+//                            paint.color = cachedDrawInfo.color.toArgb()
+//                        } else if (cachedDrawInfo.drawMode == DrawMode.Eraser) {
+//                            paint.color = Color.White.toArgb()
+//                        }
+//                        canvas.drawLine(
+//                            startX.toFloat(),
+//                            startY.toFloat(),
+//                            endX.toFloat(),
+//                            endY.toFloat(),
+//                            paint
+//                        )
+//                        bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
+//                    }
+//                }
+//            }
+//    ) {
+//        drawIntoCanvas { canvas ->
+//            canvas.nativeCanvas.drawBitmap(bitmap, 0f, 0f, null)
+//        }
+//    }
+//}
+
+
 @Composable
 fun Whiteboard(drawInfo: DrawInfo) {
-    val lines = remember { mutableStateListOf<Line>() }
+    val drawnItems = remember { mutableStateListOf<DrawnItem>() }
+
     val canvasColor = Color.White
     var cachedDrawInfo by remember { mutableStateOf(DrawInfo()) }
     cachedDrawInfo = drawInfo
+
+    var tempItem by remember { mutableStateOf<DrawnItem?>(null) }
+
 
     Canvas(modifier = Modifier
         .fillMaxSize()
         .background(canvasColor) // Default: White
         .pointerInput(Unit) {
-            detectDragGestures(onDrag = { change, dragAmount ->
-                if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Eraser) {
-                    change.consume()
-                    val line = Line(
-                        start = change.position - dragAmount,
-                        end = change.position,
-                        color = if (cachedDrawInfo.drawMode == DrawMode.Pen) cachedDrawInfo.color else canvasColor,
-                        strokeWidth = cachedDrawInfo.strokeWidth.dp
-                    )
+            detectDragGestures(
+                onDragEnd = {
+                    if (cachedDrawInfo.drawMode == DrawMode.Shape) {
+                        if (tempItem != null) {
+                            drawnItems.add(tempItem!!)
+                            tempItem = null
+                        }
+                    }
+                },
 
-                    lines.add(line)
+                onDragStart = { change ->
+                    tempItem = DrawnItem(
+                        drawMode = cachedDrawInfo.drawMode,
+                        shape = cachedDrawInfo.shape,
+                        color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) canvasColor else cachedDrawInfo.color,
+                        strokeWidth = cachedDrawInfo.strokeWidth,
+                        start = change,
+                        end = change
+                    )
+                },
+
+
+                onDrag = { change, _ ->
+                    if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Eraser) {
+                        change.consume()
+                        tempItem = tempItem?.copy(end = change.position)
+                        if (tempItem != null) {
+                            drawnItems.add(tempItem!!)
+                        }
+                        tempItem = tempItem?.copy(start = change.position)
+                    }
+                    else if (cachedDrawInfo.drawMode == DrawMode.Shape) {
+                        tempItem = tempItem?.copy(end = change.position)
+                    }
                 }
-            })
+            )
         }
     ) {
-        lines.forEach { line ->
-            drawLine(
-                color = line.color,
-                start = line.start,
-                end = line.end,
-                strokeWidth = line.strokeWidth.toPx(),
-                cap = StrokeCap.Round
-            )
+        drawnItems.forEach { item ->
+            if (item.shape == Shape.Line || item.shape == Shape.StraightLine) {
+                drawLine(
+                    color = item.color,
+                    start = item.start,
+                    end = item.end,
+                    strokeWidth = item.strokeWidth,
+                    cap = StrokeCap.Round
+                )
+            } else if (item.shape == Shape.Rectangle) {
+                drawRect(
+                    color = item.color,
+                    topLeft = item.start,
+                    size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
+                    style = Stroke(
+                        width = item.strokeWidth
+                    )
+                )
+            } else if (item.shape == Shape.Oval) {
+                drawOval(
+                    color = item.color,
+                    topLeft = item.start,
+                    size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
+                    style = Stroke(
+                        width = item.strokeWidth
+                    )
+                )
+
+            }
+        }
+
+        if (tempItem != null) {
+            if (tempItem!!.shape == Shape.Rectangle) {
+                drawRect(
+                    color = tempItem!!.color,
+                    topLeft = tempItem!!.start,
+                    size = Size(tempItem!!.end.x - tempItem!!.start.x, tempItem!!.end.y - tempItem!!.start.y),
+                    style = Stroke(
+                        width = tempItem!!.strokeWidth
+                    )
+                )
+            } else if (tempItem!!.shape == Shape.Oval) {
+                drawOval(
+                    color = tempItem!!.color,
+                    topLeft = tempItem!!.start,
+                    size = Size(tempItem!!.end.x - tempItem!!.start.x, tempItem!!.end.y - tempItem!!.start.y),
+                    style = Stroke(
+                        width = tempItem!!.strokeWidth
+                    )
+                )
+            } else if (tempItem!!.shape == Shape.StraightLine) {
+                drawLine(
+                    color = tempItem!!.color,
+                    start = tempItem!!.start,
+                    end = tempItem!!.end,
+                    strokeWidth = tempItem!!.strokeWidth,
+                    cap = StrokeCap.Round
+                )
+            }
         }
     }
 }
 
-@Composable
-fun EraserToggleButton(eraserActive: Boolean, onToggle: () -> Unit) {
-    Button(
-        onClick = { onToggle() },
-        modifier = Modifier
-            .padding(8.dp)
-            .size(27.dp)
-            .background(
-                color = if (eraserActive) Color.LightGray else Color.White,
-                shape = CircleShape
-            )
-    ) {}
-}
+
 
 @Composable
-fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
+fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit, setting: Settings, setSetting: (Settings) -> Unit) {
     Column(modifier = Modifier
         .background(MaterialTheme.colorScheme.secondaryContainer)
+        .zIndex(1f)
     ) {
-        if (drawInfo.drawMode == DrawMode.LineWeight || drawInfo.drawMode == DrawMode.ColorPicker) {
+        if (setting != Settings.NULL) {
             Row(
                 modifier = Modifier
                     .background(MaterialTheme.colorScheme.secondaryContainer)
@@ -155,7 +294,8 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
-                if (drawInfo.drawMode == DrawMode.LineWeight) {
+                // Line Weight Setting
+                if (setting == Settings.LineWeight) {
                     Slider(
                         value = drawInfo.strokeWidth,
                         onValueChange = {
@@ -165,17 +305,56 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
                     )
                 }
 
-                // penColorOn.value
-                if (drawInfo.drawMode == DrawMode.ColorPicker) {
-                    val colors = listOf<Color>(Color.Black, Color.Gray, Color.Red,
-                            Color.Yellow, Color.Green, Color.Blue, Color.Cyan, Color.Magenta)
+                // Color Picker Setting
+                if (setting == Settings.ColorPicker) {
+                    val colors = listOf(Color.Black, Color.Gray, Color.Red,
+                        Color.Yellow, Color.Green, Color.Blue, Color.Cyan, Color.Magenta)
                     colors.forEach { color ->
                         Button(
                             onClick = { setDrawInfo(drawInfo.copy(color = color)) },
                             shape = CircleShape,
                             colors = ButtonDefaults.buttonColors(color),
-                            modifier = Modifier.size(25.dp)
+                            modifier = Modifier
+                                .size(45.dp)
+                                .background(
+                                    color = if (drawInfo.color == color) Color.White else MaterialTheme.colorScheme.secondaryContainer,
+                                    shape = CircleShape
+                                )
+                                .padding(10.dp)
                         ) {}
+                    }
+                }
+
+                // Shape Setting
+                if (setting == Settings.Shape) {
+                    IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.Rectangle)) }) {
+                        Icon(Icons.Outlined.Rectangle, contentDescription = "Localized description", modifier = Modifier
+                            .background(
+                                color = if (drawInfo.shape == Shape.Rectangle) Color.White else MaterialTheme.colorScheme.secondaryContainer,
+                                shape = CircleShape,
+                            )
+                            .padding(5.dp)
+                        )
+                    }
+
+                    IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.Oval)) }) {
+                        Icon(Icons.Outlined.Circle, contentDescription = "Localized description", modifier = Modifier
+                            .background(
+                                color = if (drawInfo.shape == Shape.Oval) Color.White else MaterialTheme.colorScheme.secondaryContainer,
+                                shape = CircleShape,
+                            )
+                            .padding(5.dp)
+                        )
+                    }
+
+                    IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.StraightLine)) }) {
+                        Icon(painterResource(id = R.drawable.pen_size_3_24px), contentDescription = "Localized description", modifier = Modifier
+                            .background(
+                                color = if (drawInfo.shape == Shape.StraightLine) Color.White else MaterialTheme.colorScheme.secondaryContainer,
+                                shape = CircleShape,
+                            )
+                            .padding(5.dp)
+                        )
                     }
                 }
             }
@@ -188,37 +367,89 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
             horizontalArrangement = Arrangement.SpaceEvenly,
             verticalAlignment = Alignment.CenterVertically
         ) {
-            //Spacer(Modifier.weight(1f, true))
+            // Pen Button
             IconButton(
-                onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.Pen)) }
+                onClick = {
+                    if (drawInfo.drawMode == DrawMode.Pen) {
+                        setDrawInfo(drawInfo.copy(drawMode = DrawMode.NULL))
+                    } else {
+                        setDrawInfo(drawInfo.copy(drawMode = DrawMode.Pen, shape = Shape.Line))
+                    }
+                }
             ) {
                 Icon(Icons.Filled.Create, contentDescription = "Localized description", modifier = Modifier
                     .background(
-                        color = if (drawInfo.drawMode == DrawMode.Pen) Color.LightGray else MaterialTheme.colorScheme.primaryContainer,
+                        color = if (drawInfo.drawMode == DrawMode.Pen) Color.White else MaterialTheme.colorScheme.primaryContainer,
                         shape = CircleShape,
                     )
                     .padding(5.dp)
                 )
             }
 
-            EraserToggleButton(drawInfo.drawMode == DrawMode.Eraser) {
-                setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser))
-            }
-
-            IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.LineWeight)) }) {
-                Icon(Icons.Filled.LineWeight, contentDescription = "Localized description", modifier = Modifier
+            // Eraser Button
+            IconButton(onClick = {
+                if (drawInfo.drawMode == DrawMode.Eraser) {
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.NULL))
+                } else {
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser))
+                }
+            }) {
+                Icon(painterResource(id = R.drawable.ink_eraser_24px), contentDescription = "Localized description", modifier = Modifier
                     .background(
-                        color = if (drawInfo.drawMode == DrawMode.LineWeight) Color.LightGray else MaterialTheme.colorScheme.primaryContainer,
+                        color = if (drawInfo.drawMode == DrawMode.Eraser) Color.White else MaterialTheme.colorScheme.primaryContainer,
                         shape = CircleShape,
                     )
                     .padding(5.dp)
                 )
             }
 
-            IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.ColorPicker)) }) {
-                Icon(Icons.Filled.Palette, contentDescription = "Localized description", modifier = Modifier
+            // Line Weight Button
+            IconButton(onClick = {
+                if (setting == Settings.LineWeight) {
+                    setSetting(Settings.NULL)
+                } else {
+                    setSetting(Settings.LineWeight)
+                }
+            }) {
+                Icon(Icons.Outlined.LineWeight, contentDescription = "Localized description", modifier = Modifier
                     .background(
-                        color = if (drawInfo.drawMode == DrawMode.ColorPicker) Color.LightGray else MaterialTheme.colorScheme.primaryContainer,
+                        color = if (setting == Settings.LineWeight) Color.White else MaterialTheme.colorScheme.primaryContainer,
+                        shape = CircleShape,
+                    )
+                    .padding(5.dp)
+                )
+            }
+
+            // Shapes Selection Button
+            IconButton(onClick = {
+                if (setting == Settings.Shape) {
+                    setSetting(Settings.NULL)
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.NULL))
+                } else {
+                    setSetting(Settings.Shape)
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.Rectangle)) // Default shape
+                }
+            }) {
+                Icon(Icons.Outlined.ShapeLine, contentDescription = "Localized description", modifier = Modifier
+                    .background(
+                        color = if (setting == Settings.Shape) Color.White else MaterialTheme.colorScheme.primaryContainer,
+                        shape = CircleShape,
+                    )
+                    .padding(5.dp)
+                )
+            }
+
+            // Color Picker Button
+            IconButton(onClick = {
+                if (setting == Settings.ColorPicker) {
+                    setSetting(Settings.NULL)
+                } else {
+                    setSetting(Settings.ColorPicker)
+                }
+            }) {
+                Icon(Icons.Outlined.Palette, contentDescription = "Localized description", modifier = Modifier
+                    .background(
+                        color = if (setting == Settings.ColorPicker) Color.White else MaterialTheme.colorScheme.primaryContainer,
                         shape = CircleShape,
                     )
                     .padding(5.dp)
