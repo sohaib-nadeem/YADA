@@ -1,10 +1,12 @@
 package ca.uwaterloo.cs346project
 import android.os.Bundle
+import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -42,6 +44,12 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import ca.uwaterloo.cs346project.ui.theme.CS346ProjectTheme
+import com.google.gson.Gson
+import com.google.gson.reflect.TypeToken
+import java.io.File
+import kotlin.math.max
+import kotlin.math.min
+import kotlin.math.sqrt
 
 
 data class DrawnItem(
@@ -50,8 +58,8 @@ data class DrawnItem(
     val color: Color = Color.Black,
     val strokeWidth: Float = 4f,
     val filled: Boolean = false,
-    val start: Offset = Offset(0f, 0f),
-    val end: Offset = Offset(0f, 0f)
+    var start: Offset = Offset(0f, 0f),
+    var end: Offset = Offset(0f, 0f)
 )
 
 // Contains attributes for pen and eraser as well as the drawing mode
@@ -70,10 +78,70 @@ enum class Settings { ColorPicker, LineWeight, Shape, NULL }
 
 enum class Shape { Rectangle, Oval, Line, StraightLine }
 
+// Stores all the drawn items (lines, straight lines, rectangles, ovals, erasing lines)
+var drawnItems = mutableStateListOf<DrawnItem>()
+
+
+// Checks if a point is close enough to a rectangle/oval
+fun isPointCloseToRectangle(point: Offset, item: DrawnItem): Boolean {
+    if (item.shape != Shape.Rectangle && item.shape != Shape.Oval) {
+        return false
+    }
+    val margin = 100f
+    val minX = min(item.start.x, item.end.x)
+    val maxX = max(item.start.x, item.end.x)
+    val minY = min(item.start.y, item.end.y)
+    val maxY = max(item.start.y, item.end.y)
+    return point.x in (minX - margin)..(maxX + margin) && point.y in (minY - margin)..(maxY + margin) &&
+            !(point.x in (minX + margin)..(maxX - margin) && point.y in (minY + margin)..(maxY - margin))
+}
+
+
+// Checks if a point is close enough to a straight line
+fun isPointCloseToLine(point: Offset, item: DrawnItem): Boolean {
+    if (item.shape != Shape.StraightLine) {
+        return false
+    }
+
+    val x1 = item.start.x
+    val y1 = item.start.y
+    val x2 = item.end.x
+    val y2 = item.end.y
+    val px = point.x
+    val py = point.y
+
+    val dx = x2 - x1
+    val dy = y2 - y1
+    val l2 = dx * dx + dy * dy
+    val t = ((px - x1) * dx + (py - y1) * dy) / l2
+    val tt = max(0f, min(1f, t))
+    val projX = x1 + tt * dx
+    val projY = y1 + tt * dy
+    val distance = sqrt((projX - px) * (projX - px) + (projY - py) * (projY - py))
+
+    val threshold = item.strokeWidth + 50f
+    return distance < threshold
+}
+
 
 class MainActivity : ComponentActivity() {
+    override fun onStop() {
+        super.onStop()
+        val json = Gson().toJson(drawnItems)
+        val file = File(filesDir, "drawnItems.json")
+        file.writeText(json)
+    }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        val drawnItemsDataFile = File(filesDir, "drawnItemsData.json")
+
+        if (drawnItemsDataFile.exists()) {
+            val json = drawnItemsDataFile.readText()
+            val type = object : TypeToken<List<DrawnItem>>() {}.type
+            drawnItems = Gson().fromJson(json, type)
+        }
+
+
         setContent {
             var drawInfo by remember { mutableStateOf(DrawInfo()) }
             var setting by remember { mutableStateOf(Settings.NULL) }
@@ -102,187 +170,317 @@ class MainActivity : ComponentActivity() {
 }
 
 
-
-// TESTING VERSION: Using Bitmap. (drawback: gaps between lines)
-//@Composable
-//fun Whiteboard(drawInfo: DrawInfo) {
-//    var cachedDrawInfo by remember { mutableStateOf(DrawInfo()) }
-//    cachedDrawInfo = drawInfo
-//
-//    var canvasWidth = ScreenSize.width
-//    var canvasHeight = ScreenSize.height
-//    var bitmap by remember(canvasWidth, canvasHeight) {
-//        mutableStateOf(Bitmap.createBitmap(canvasWidth, canvasHeight, Bitmap.Config.ARGB_8888))
-//    }
-//    val path = Path()
-//
-//    Canvas(
-//        modifier = Modifier
-//            .fillMaxSize()
-//            .background(Color.White)
-//            .pointerInput(Unit) {
-//                detectDragGestures { change, _ ->
-//                    val startX = change.previousPosition.x.toInt()
-//                    val startY = change.previousPosition.y.toInt()
-//                    val endX = change.position.x.toInt()
-//                    val endY = change.position.y.toInt()
-//                    val paint = Paint().apply {
-//                        color = cachedDrawInfo.color.toArgb()
-//                        strokeWidth = cachedDrawInfo.strokeWidth
-//                    }
-//
-//                    if (startX in 0 until canvasWidth && startY in 0 until canvasHeight &&
-//                        endX in 0 until canvasWidth && endY in 0 until canvasHeight
-//                    ) {
-//
-//                        val canvas = android.graphics.Canvas(bitmap)
-//                        if (cachedDrawInfo.drawMode == DrawMode.Pen) {
-//                            paint.color = cachedDrawInfo.color.toArgb()
-//                        } else if (cachedDrawInfo.drawMode == DrawMode.Eraser) {
-//                            paint.color = Color.White.toArgb()
-//                        }
-//                        canvas.drawLine(
-//                            startX.toFloat(),
-//                            startY.toFloat(),
-//                            endX.toFloat(),
-//                            endY.toFloat(),
-//                            paint
-//                        )
-//                        bitmap = bitmap.copy(Bitmap.Config.ARGB_8888, true)
-//                    }
-//                }
-//            }
-//    ) {
-//        drawIntoCanvas { canvas ->
-//            canvas.nativeCanvas.drawBitmap(bitmap, 0f, 0f, null)
-//        }
-//    }
-//}
-
-
 @Composable
 fun Whiteboard(drawInfo: DrawInfo) {
-    val drawnItems = remember { mutableStateListOf<DrawnItem>() }
-
     val canvasColor = Color.White
     var cachedDrawInfo by remember { mutableStateOf(DrawInfo()) }
     cachedDrawInfo = drawInfo
 
     var tempItem by remember { mutableStateOf<DrawnItem?>(null) }
+    var selectedItemIndex by remember { mutableStateOf(-1) }
 
-
-    Canvas(modifier = Modifier
-        .fillMaxSize()
-        .background(canvasColor) // Default: White
-        .pointerInput(Unit) {
-            detectDragGestures(
-                onDragEnd = {
-                    if (cachedDrawInfo.drawMode == DrawMode.Shape) {
-                        if (tempItem != null) {
-                            drawnItems.add(tempItem!!)
-                            tempItem = null
-                        }
-                    }
-                },
-
-                onDragStart = { change ->
-                    tempItem = DrawnItem(
-                        drawMode = cachedDrawInfo.drawMode,
-                        shape = cachedDrawInfo.shape,
-                        color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) canvasColor else cachedDrawInfo.color,
-                        strokeWidth = cachedDrawInfo.strokeWidth,
-                        start = change,
-                        end = change
-                    )
-                },
-
-
-                onDrag = { change, _ ->
-                    if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Eraser) {
-                        change.consume()
-                        tempItem = tempItem?.copy(end = change.position)
-                        if (tempItem != null) {
-                            drawnItems.add(tempItem!!)
-                        }
-                        tempItem = tempItem?.copy(start = change.position)
-                    }
-                    else if (cachedDrawInfo.drawMode == DrawMode.Shape) {
-                        tempItem = tempItem?.copy(end = change.position)
-                    }
-                }
-            )
-        }
+    Box(
+        modifier = Modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopEnd
     ) {
-        drawnItems.forEach { item ->
-            when (item.shape) {
-                Shape.Line, Shape.StraightLine -> {
-                    drawLine(
-                        color = item.color,
-                        start = item.start,
-                        end = item.end,
-                        strokeWidth = item.strokeWidth,
-                        cap = StrokeCap.Round
-                    )
-                }
-                Shape.Rectangle -> {
-                    drawRect(
-                        color = item.color,
-                        topLeft = item.start,
-                        size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
-                        style = Stroke(
-                            width = item.strokeWidth
+        Canvas(modifier = Modifier
+            .fillMaxSize()
+            .background(canvasColor) // Default: White
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { point ->
+                        val index = drawnItems.indexOfFirst { item ->
+                            ((item.shape == Shape.Rectangle || item.shape == Shape.Oval) && isPointCloseToRectangle(point, item)) ||
+                                    ((item.shape == Shape.StraightLine && isPointCloseToLine(point, item)))
+                        }
+                        selectedItemIndex = index
+                    }
+                )
+            }
+
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragEnd = {
+                        if (cachedDrawInfo.drawMode == DrawMode.Shape) {
+                            if (tempItem != null) {
+                                drawnItems.add(tempItem!!)
+                                tempItem = null
+                            }
+                        }
+                    },
+
+                    onDragStart = { change ->
+                        tempItem = DrawnItem(
+                            drawMode = cachedDrawInfo.drawMode,
+                            shape = cachedDrawInfo.shape,
+                            color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) canvasColor else cachedDrawInfo.color,
+                            strokeWidth = cachedDrawInfo.strokeWidth,
+                            start = change,
+                            end = change
                         )
-                    )
-                }
-                Shape.Oval -> {
-                    drawOval(
-                        color = item.color,
-                        topLeft = item.start,
-                        size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
-                        style = Stroke(
-                            width = item.strokeWidth
+                    },
+
+
+                    onDrag = { change, amount ->
+                        // Selecting mode
+                        if (selectedItemIndex != -1) {
+                            val updatedItem = drawnItems[selectedItemIndex].copy(
+                                start = Offset(drawnItems[selectedItemIndex].start.x + amount.x, drawnItems[selectedItemIndex].start.y + amount.y),
+                                end = Offset(drawnItems[selectedItemIndex].end.x + amount.x, drawnItems[selectedItemIndex].end.y + amount.y)
+                            )
+                            drawnItems[selectedItemIndex] = updatedItem
+                        }
+                        // Drawing mode
+                        else {
+                            if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Eraser) {
+                                change.consume()
+                                tempItem = tempItem?.copy(end = change.position)
+                                if (tempItem != null) {
+                                    drawnItems.add(tempItem!!)
+                                }
+                                tempItem = tempItem?.copy(start = change.position)
+                            }
+                            else if (cachedDrawInfo.drawMode == DrawMode.Shape) {
+                                tempItem = tempItem?.copy(end = change.position)
+
+                            }
+                        }
+
+
+                    }
+                )
+            }
+        ) {
+            drawnItems.forEach { item ->
+                when (item.shape) {
+                    Shape.Line, Shape.StraightLine -> {
+                        drawLine(
+                            color = item.color,
+                            start = item.start,
+                            end = item.end,
+                            strokeWidth = item.strokeWidth,
+                            cap = StrokeCap.Round
                         )
-                    )
+                    }
+                    Shape.Rectangle -> {
+                        drawRect(
+                            color = item.color,
+                            topLeft = item.start,
+                            size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
+                            style = Stroke(
+                                width = item.strokeWidth
+                            )
+                        )
+                    }
+                    Shape.Oval -> {
+                        drawOval(
+                            color = item.color,
+                            topLeft = item.start,
+                            size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
+                            style = Stroke(
+                                width = item.strokeWidth
+                            )
+                        )
+                    }
                 }
+            }
+
+            tempItem?.let {
+                when (it.shape) {
+                    Shape.Rectangle -> {
+                        drawRect(
+                            color = it.color,
+                            topLeft = it.start,
+                            size = Size(it.end.x - it.start.x, it.end.y - it.start.y),
+                            style = Stroke(
+                                width = it.strokeWidth
+                            )
+                        )
+                    }
+                    Shape.Oval -> {
+                        drawOval(
+                            color = it.color,
+                            topLeft = it.start,
+                            size = Size(it.end.x - it.start.x, it.end.y - it.start.y),
+                            style = Stroke(
+                                width = it.strokeWidth
+                            )
+                        )
+                    }
+                    Shape.StraightLine -> {
+                        drawLine(
+                            color = it.color,
+                            start = it.start,
+                            end = it.end,
+                            strokeWidth = it.strokeWidth,
+                            cap = StrokeCap.Round
+                        )
+                    }
+                    else -> Unit // Do nothing for other shapes
+                }
+            }
+
+//            selectedItem?.let { item ->
+//                if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
+//                    //val cornerSize = item.strokeWidth + 40f
+//                    val cornerSize = 40f
+//                    val corners = listOf(
+//                        item.start,
+//                        Offset(item.end.x, item.start.y),
+//                        Offset(item.start.x, item.end.y),
+//                        item.end
+//                    )
+//                    corners.forEach { corner ->
+//                        drawRect(
+//                            color = Color.Red,  // Choose any color you like
+//                            topLeft = Offset(corner.x - cornerSize / 2, corner.y - cornerSize / 2),
+//                            size = Size(cornerSize, cornerSize),
+//                            style = Stroke(width = 5f)
+//                        )
+//                    }
+//                    // Draw the rectangle boundary of the selected oval
+//                    if (item.shape == Shape.Oval) {
+//                        drawRect(
+//                            color = Color.Red,
+//                            topLeft = item.start,
+//                            size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
+//                            style = Stroke(
+//                                width = 3f,
+//                                //pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f) // make rectangle outline dotted
+//                            )
+//                        )
+//                    }
+//                } else if (item.shape == Shape.StraightLine) {
+//                    val radius = 20f
+//                    val circleColor = Color.Red
+//
+//                    drawCircle(
+//                        color = circleColor,
+//                        center = item.start,
+//                        radius = radius,
+//                        style = Stroke(width = 5f)
+//                    )
+//
+//                    drawCircle(
+//                        color = circleColor,
+//                        center = item.end,
+//                        radius = radius,
+//                        style = Stroke(width = 5f)
+//                    )
+//                }
+//            }
+            if (selectedItemIndex != -1) {
+                if (selectedItemIndex < drawnItems.size) {
+                    val item = drawnItems[selectedItemIndex]
+                    if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
+                        val cornerSize = 40f
+                        val corners = listOf(
+                            item.start,
+                            Offset(item.end.x, item.start.y),
+                            Offset(item.start.x, item.end.y),
+                            item.end
+                        )
+                        corners.forEach { corner ->
+                            drawRect(
+                                color = Color.Red,
+                                topLeft = Offset(corner.x - cornerSize / 2, corner.y - cornerSize / 2),
+                                size = Size(cornerSize, cornerSize),
+                                style = Stroke(width = 5f)
+                            )
+                        }
+                        if (item.shape == Shape.Oval) {
+                            drawRect(
+                                color = Color.Red,
+                                topLeft = item.start,
+                                size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
+                                style = Stroke(
+                                    width = 3f
+                                )
+                            )
+                        }
+                    } else if (item.shape == Shape.StraightLine) {
+                        val radius = 20f
+                        val circleColor = Color.Red
+
+                        drawCircle(
+                            color = circleColor,
+                            center = item.start,
+                            radius = radius,
+                            style = Stroke(width = 5f)
+                        )
+
+                        drawCircle(
+                            color = circleColor,
+                            center = item.end,
+                            radius = radius,
+                            style = Stroke(width = 5f)
+                        )
+                    }
+                } else {
+                    selectedItemIndex = -1
+                }
+
+            }
+
+        }
+
+
+        Row(
+            horizontalArrangement = Arrangement.End,
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier.padding(8.dp)
+        ) {
+            // Undo button
+            IconButton(onClick = { /* Handle undo */ }) {
+                Icon(painterResource(id = R.drawable.undo_24px), contentDescription = "Undo", modifier = Modifier
+                    .background(
+                        color = Color.LightGray,
+                        shape = CircleShape,
+                    )
+                    .padding(5.dp)
+                )
+            }
+
+            // Redo button
+            IconButton(onClick = { /* Handle redo */ }) {
+                Icon(painterResource(id = R.drawable.redo_24px), contentDescription = "Redo", modifier = Modifier
+                    .background(
+                        color = Color.LightGray,
+                        shape = CircleShape,
+                    )
+                    .padding(5.dp)
+                )
+            }
+
+            // Delete page button
+            IconButton(onClick = {
+                drawnItems.clear()
+            }) {
+                Icon(painterResource(id = R.drawable.delete_24px), contentDescription = "Delete", modifier = Modifier
+                    .background(
+                        color = Color.LightGray,
+                        shape = CircleShape,
+                    )
+                    .padding(5.dp)
+                )
+            }
+
+            IconButton(onClick = { /* Handle redo */ }) {
+                Icon(painterResource(id = R.drawable.settings_24px), contentDescription = "Settings", modifier = Modifier
+                    .background(
+                        color = Color.LightGray,
+                        shape = CircleShape,
+                    )
+                    .padding(5.dp)
+                )
             }
         }
 
-        tempItem?.let {
-            when (it.shape) {
-                Shape.Rectangle -> {
-                    drawRect(
-                        color = it.color,
-                        topLeft = it.start,
-                        size = Size(it.end.x - it.start.x, it.end.y - it.start.y),
-                        style = Stroke(
-                            width = it.strokeWidth
-                        )
-                    )
-                }
-                Shape.Oval -> {
-                    drawOval(
-                        color = it.color,
-                        topLeft = it.start,
-                        size = Size(it.end.x - it.start.x, it.end.y - it.start.y),
-                        style = Stroke(
-                            width = it.strokeWidth
-                        )
-                    )
-                }
-                Shape.StraightLine -> {
-                    drawLine(
-                        color = it.color,
-                        start = it.start,
-                        end = it.end,
-                        strokeWidth = it.strokeWidth,
-                        cap = StrokeCap.Round
-                    )
-                }
-                else -> Unit // Do nothing for other shapes
-            }
-        }
     }
+
 }
+
+
 
 
 @Composable
