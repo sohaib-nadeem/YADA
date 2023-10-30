@@ -39,6 +39,8 @@ import androidx.compose.material.icons.outlined.LineWeight
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
@@ -50,6 +52,7 @@ import java.io.File
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
+import kotlinx.coroutines.launch
 
 
 data class DrawnItem(
@@ -162,6 +165,25 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it },
                             setting = setting, setSetting = { setting = it})
+                    }
+                    Row {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = Color.White
+                        ) {
+                            val scope = rememberCoroutineScope()
+                            var text by remember { mutableStateOf("Loading") }
+                            LaunchedEffect(true) {
+                                scope.launch {
+                                    text = try {
+                                        Greeting().greeting()
+                                    } catch (e: Exception) {
+                                        e.localizedMessage ?: "error"
+                                    }
+                                }
+                            }
+                            Text(text)
+                        }
                     }
                 }
             }
