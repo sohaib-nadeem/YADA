@@ -37,11 +37,14 @@ import androidx.compose.material.icons.outlined.LineWeight
 import androidx.compose.material.icons.outlined.Palette
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import ca.uwaterloo.cs346project.ui.theme.CS346ProjectTheme
+import kotlinx.coroutines.launch
 
 
 data class DrawnItem(
@@ -70,7 +73,6 @@ enum class Settings { ColorPicker, LineWeight, Shape, NULL }
 
 enum class Shape { Rectangle, Oval, Line, StraightLine }
 
-
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -94,6 +96,25 @@ class MainActivity : ComponentActivity() {
                     ) {
                         Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it },
                             setting = setting, setSetting = { setting = it})
+                    }
+                    Row {
+                        Surface(
+                            modifier = Modifier.fillMaxSize(),
+                            color = Color.White
+                        ) {
+                            val scope = rememberCoroutineScope()
+                            var text by remember { mutableStateOf("Loading") }
+                            LaunchedEffect(true) {
+                                scope.launch {
+                                    text = try {
+                                        Greeting().greeting()
+                                    } catch (e: Exception) {
+                                        e.localizedMessage ?: "error"
+                                    }
+                                }
+                            }
+                            Text(text)
+                        }
                     }
                 }
             }
