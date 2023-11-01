@@ -1,3 +1,6 @@
+val ktor_version: String by project
+val kotlinx_coroutines_version: String by project
+
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
@@ -49,8 +52,6 @@ android {
     }
 }
 
-val ktor_version: String by project
-
 dependencies {
 
     implementation("androidx.core:core-ktx:1.9.0")
@@ -72,10 +73,9 @@ dependencies {
     debugImplementation("androidx.compose.ui:ui-test-manifest")
     implementation("io.ktor:ktor-client-core:$ktor_version")
     implementation("io.ktor:ktor-client-okhttp:$ktor_version")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:$kotlinx_coroutines_version")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:$kotlinx_coroutines_version")
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
-
     implementation("io.ktor:ktor-client-cio:$ktor_version")
     implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
     implementation("io.ktor:ktor-serialization-kotlinx-xml:$ktor_version")
