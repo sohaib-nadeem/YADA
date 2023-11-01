@@ -40,7 +40,5 @@ class Client {
         } catch (e: Exception) {
             println("error sending")
         }
-
     }
-
 }

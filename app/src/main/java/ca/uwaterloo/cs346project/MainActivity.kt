@@ -52,7 +52,6 @@ import java.io.File
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
-import kotlinx.coroutines.launch
 
 
 data class DrawnItem(
