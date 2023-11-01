@@ -8,11 +8,9 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 data class DrawnItem(
-    val drawMode: DrawMode = DrawMode.Pen,
     val shape: Shape = Shape.Line,
     val color: Color = Color.Black,
     val strokeWidth: Float = 4f,
-    val filled: Boolean = false,
     var start: Offset = Offset(0f, 0f),
     var end: Offset = Offset(0f, 0f)
 )
@@ -27,9 +25,9 @@ data class DrawInfo (
 
 const val MAX_STROKE_WIDTH = 140f
 
-enum class DrawMode { Pen, Eraser, Shape, NULL }
+enum class DrawMode { Pen, Eraser, Shape }
 
-enum class Settings { ColorPicker, LineWeight, Shape, NULL }
+enum class ToolbarExtensionSetting { ColorSelection, StrokeWidthAdjustment, ShapeSelection, Hidden }
 
 enum class Shape { Rectangle, Oval, Line, StraightLine }
 

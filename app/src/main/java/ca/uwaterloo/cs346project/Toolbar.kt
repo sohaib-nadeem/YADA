@@ -22,19 +22,59 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.res.painterResource
+import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
+
+val colors = listOf(Color.Black, Color.Gray, Color.Red,
+    Color.Yellow, Color.Green, Color.Blue, Color.Cyan, Color.Magenta)
+
 @Composable
-fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit, setting: Settings, setSetting: (Settings) -> Unit) {
+fun ToolbarIconButton(icon: ImageVector, selected: Boolean, onClick: () -> Unit) {
+    IconButton(onClick = onClick) {
+        Icon(icon, contentDescription = "Localized description", modifier = Modifier
+            .background(
+                color = if (selected) Color.White else MaterialTheme.colorScheme.primaryContainer,
+                shape = CircleShape,
+            )
+            .padding(5.dp)
+        )
+    }
+}
+
+@Composable
+fun ToolbarColorButton(color: Color, selected: Boolean, onClick: () -> Unit) {
+    Button(
+        onClick = onClick,
+        shape = CircleShape,
+        colors = ButtonDefaults.buttonColors(color),
+        modifier = Modifier
+            .size(45.dp)
+            .background(
+                color = if (selected) Color.White else MaterialTheme.colorScheme.secondaryContainer,
+                shape = CircleShape
+            )
+            .padding(10.dp)
+    ) {}
+}
+
+@Composable
+fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
     Column(modifier = Modifier
         .background(MaterialTheme.colorScheme.secondaryContainer)
         .zIndex(1f)
     ) {
-        if (setting != Settings.NULL) {
+        var toolbarExtensionSetting by remember { mutableStateOf(ToolbarExtensionSetting.Hidden) }
+
+        if (toolbarExtensionSetting != ToolbarExtensionSetting.Hidden) {
             Row(
                 modifier = Modifier
                     .background(MaterialTheme.colorScheme.secondaryContainer)
@@ -43,7 +83,7 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit, setting: Settin
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 // Line Weight Setting
-                if (setting == Settings.LineWeight) {
+                if (toolbarExtensionSetting == ToolbarExtensionSetting.StrokeWidthAdjustment) {
                     Slider(
                         value = drawInfo.strokeWidth,
                         onValueChange = {
@@ -54,55 +94,26 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit, setting: Settin
                 }
 
                 // Color Picker Setting
-                if (setting == Settings.ColorPicker) {
-                    val colors = listOf(Color.Black, Color.Gray, Color.Red,
-                        Color.Yellow, Color.Green, Color.Blue, Color.Cyan, Color.Magenta)
+                if (toolbarExtensionSetting == ToolbarExtensionSetting.ColorSelection) {
                     colors.forEach { color ->
-                        Button(
-                            onClick = { setDrawInfo(drawInfo.copy(color = color)) },
-                            shape = CircleShape,
-                            colors = ButtonDefaults.buttonColors(color),
-                            modifier = Modifier
-                                .size(45.dp)
-                                .background(
-                                    color = if (drawInfo.color == color) Color.White else MaterialTheme.colorScheme.secondaryContainer,
-                                    shape = CircleShape
-                                )
-                                .padding(10.dp)
-                        ) {}
+                        ToolbarColorButton(color = color, selected = drawInfo.color == color) {
+                            setDrawInfo(drawInfo.copy(color = color))
+                        }
                     }
                 }
 
                 // Shape Setting
-                if (setting == Settings.Shape) {
-                    IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.Rectangle)) }) {
-                        Icon(Icons.Outlined.Rectangle, contentDescription = "Localized description", modifier = Modifier
-                            .background(
-                                color = if (drawInfo.shape == Shape.Rectangle) Color.White else MaterialTheme.colorScheme.secondaryContainer,
-                                shape = CircleShape,
-                            )
-                            .padding(5.dp)
-                        )
+                if (toolbarExtensionSetting == ToolbarExtensionSetting.ShapeSelection) {
+                    ToolbarIconButton(Icons.Outlined.Rectangle, selected = (drawInfo.shape == Shape.Rectangle)) {
+                        setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.Rectangle))
                     }
 
-                    IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.Oval)) }) {
-                        Icon(Icons.Outlined.Circle, contentDescription = "Localized description", modifier = Modifier
-                            .background(
-                                color = if (drawInfo.shape == Shape.Oval) Color.White else MaterialTheme.colorScheme.secondaryContainer,
-                                shape = CircleShape,
-                            )
-                            .padding(5.dp)
-                        )
+                    ToolbarIconButton(Icons.Outlined.Circle, selected = (drawInfo.shape == Shape.Oval)) {
+                        setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.Oval))
                     }
 
-                    IconButton(onClick = { setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.StraightLine)) }) {
-                        Icon(painterResource(id = R.drawable.pen_size_3_24px), contentDescription = "Localized description", modifier = Modifier
-                            .background(
-                                color = if (drawInfo.shape == Shape.StraightLine) Color.White else MaterialTheme.colorScheme.secondaryContainer,
-                                shape = CircleShape,
-                            )
-                            .padding(5.dp)
-                        )
+                    ToolbarIconButton(ImageVector.vectorResource(id = R.drawable.pen_size_3_24px), selected = (drawInfo.shape == Shape.StraightLine)) {
+                        setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.StraightLine))
                     }
                 }
             }
@@ -116,92 +127,43 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit, setting: Settin
             verticalAlignment = Alignment.CenterVertically
         ) {
             // Pen Button
-            IconButton(
-                onClick = {
-                    if (drawInfo.drawMode == DrawMode.Pen) {
-                        setDrawInfo(drawInfo.copy(drawMode = DrawMode.NULL))
-                    } else {
-                        setDrawInfo(drawInfo.copy(drawMode = DrawMode.Pen, shape = Shape.Line))
-                    }
-                }
-            ) {
-                Icon(Icons.Filled.Create, contentDescription = "Localized description", modifier = Modifier
-                    .background(
-                        color = if (drawInfo.drawMode == DrawMode.Pen) Color.White else MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape,
-                    )
-                    .padding(5.dp)
-                )
+            ToolbarIconButton(Icons.Filled.Create, selected = (drawInfo.drawMode == DrawMode.Pen)) {
+                setDrawInfo(drawInfo.copy(drawMode = DrawMode.Pen, shape = Shape.Line))
+                toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
             }
 
             // Eraser Button
-            IconButton(onClick = {
-                if (drawInfo.drawMode == DrawMode.Eraser) {
-                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.NULL))
-                } else {
-                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser, shape = Shape.Line))
-                }
-            }) {
-                Icon(painterResource(id = R.drawable.ink_eraser_24px), contentDescription = "Localized description", modifier = Modifier
-                    .background(
-                        color = if (drawInfo.drawMode == DrawMode.Eraser) Color.White else MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape,
-                    )
-                    .padding(5.dp)
-                )
-            }
-
-            // Line Weight Button
-            IconButton(onClick = {
-                if (setting == Settings.LineWeight) {
-                    setSetting(Settings.NULL)
-                } else {
-                    setSetting(Settings.LineWeight)
-                }
-            }) {
-                Icon(Icons.Outlined.LineWeight, contentDescription = "Localized description", modifier = Modifier
-                    .background(
-                        color = if (setting == Settings.LineWeight) Color.White else MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape,
-                    )
-                    .padding(5.dp)
-                )
+            ToolbarIconButton(ImageVector.vectorResource(id = R.drawable.ink_eraser_24px), selected = (drawInfo.drawMode == DrawMode.Eraser)) {
+                setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser, shape = Shape.Line))
+                toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
             }
 
             // Shapes Selection Button
-            IconButton(onClick = {
-                if (setting == Settings.Shape) {
-                    setSetting(Settings.NULL)
-                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.NULL))
+            ToolbarIconButton(icon = Icons.Outlined.ShapeLine, selected = (drawInfo.drawMode == DrawMode.Shape)) {
+                if (toolbarExtensionSetting == ToolbarExtensionSetting.ShapeSelection) {
+                    toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
                 } else {
-                    setSetting(Settings.Shape)
+                    toolbarExtensionSetting = ToolbarExtensionSetting.ShapeSelection
                     setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.Rectangle)) // Default shape
                 }
-            }) {
-                Icon(Icons.Outlined.ShapeLine, contentDescription = "Localized description", modifier = Modifier
-                    .background(
-                        color = if (setting == Settings.Shape) Color.White else MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape,
-                    )
-                    .padding(5.dp)
-                )
+            }
+
+            // Line Weight Button
+            ToolbarIconButton(icon = Icons.Outlined.LineWeight, selected = (toolbarExtensionSetting == ToolbarExtensionSetting.StrokeWidthAdjustment)) {
+                if (toolbarExtensionSetting == ToolbarExtensionSetting.StrokeWidthAdjustment) {
+                    toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
+                } else {
+                    toolbarExtensionSetting = ToolbarExtensionSetting.StrokeWidthAdjustment
+                }
             }
 
             // Color Picker Button
-            IconButton(onClick = {
-                if (setting == Settings.ColorPicker) {
-                    setSetting(Settings.NULL)
+            ToolbarIconButton(icon = Icons.Outlined.Palette, selected = (toolbarExtensionSetting == ToolbarExtensionSetting.ColorSelection)) {
+                if (toolbarExtensionSetting == ToolbarExtensionSetting.ColorSelection) {
+                    toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
                 } else {
-                    setSetting(Settings.ColorPicker)
+                    toolbarExtensionSetting = ToolbarExtensionSetting.ColorSelection
                 }
-            }) {
-                Icon(Icons.Outlined.Palette, contentDescription = "Localized description", modifier = Modifier
-                    .background(
-                        color = if (setting == Settings.ColorPicker) Color.White else MaterialTheme.colorScheme.primaryContainer,
-                        shape = CircleShape,
-                    )
-                    .padding(5.dp)
-                )
             }
         }
     }
