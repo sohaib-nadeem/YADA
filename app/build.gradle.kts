@@ -74,4 +74,12 @@ dependencies {
     implementation("io.ktor:ktor-client-okhttp:$ktor_version")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-core:1.6.4")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.6.4")
+    implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
+
+    implementation("io.ktor:ktor-client-cio:$ktor_version")
+    implementation("io.ktor:ktor-client-content-negotiation:$ktor_version")
+    implementation("io.ktor:ktor-serialization-kotlinx-xml:$ktor_version")
+    implementation("io.ktor:ktor-serialization-kotlinx-cbor:$ktor_version")
+    implementation("io.ktor:ktor-serialization-kotlinx-protobuf:$ktor_version")
+    implementation("io.ktor:ktor-client-logging:$ktor_version")
 }

@@ -146,9 +146,13 @@ class MainActivity : ComponentActivity() {
 
 
         setContent {
+            scope.launch {
+                while(true) {
+                    Client().receive()
+                };
+            }
             var drawInfo by remember { mutableStateOf(DrawInfo()) }
             var setting by remember { mutableStateOf(Settings.NULL) }
-
             CS346ProjectTheme {
                 Box {
                     Row(modifier = Modifier
@@ -166,7 +170,7 @@ class MainActivity : ComponentActivity() {
                         Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it },
                             setting = setting, setSetting = { setting = it})
                     }
-                    Row {
+                   /* Row {
                         Surface(
                             modifier = Modifier.fillMaxSize(),
                             color = Color.White
@@ -176,7 +180,7 @@ class MainActivity : ComponentActivity() {
                             LaunchedEffect(true) {
                                 scope.launch {
                                     text = try {
-                                        Greeting().greeting()
+                                        Client().receive()
                                     } catch (e: Exception) {
                                         e.localizedMessage ?: "error"
                                     }
@@ -184,7 +188,7 @@ class MainActivity : ComponentActivity() {
                             }
                             Text(text)
                         }
-                    }
+                    }*/
                 }
             }
         }
@@ -200,7 +204,7 @@ fun Whiteboard(drawInfo: DrawInfo) {
 
     var tempItem by remember { mutableStateOf<DrawnItem?>(null) }
     var selectedItemIndex by remember { mutableStateOf(-1) }
-
+    val scope = rememberCoroutineScope()
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopEnd
@@ -227,8 +231,13 @@ fun Whiteboard(drawInfo: DrawInfo) {
                             if (tempItem != null) {
                                 drawnItems.add(tempItem!!)
                                 tempItem = null
+                                scope.launch {
+                                    Client().send(drawnItems.last())
+                                }
                             }
                         }
+
+
                     },
 
                     onDragStart = { change ->
@@ -261,6 +270,9 @@ fun Whiteboard(drawInfo: DrawInfo) {
                                     drawnItems.add(tempItem!!)
                                 }
                                 tempItem = tempItem?.copy(start = change.position)
+                                scope.launch {
+                                    Client().send(drawnItems.last())
+                                }
                             }
                             else if (cachedDrawInfo.drawMode == DrawMode.Shape) {
                                 tempItem = tempItem?.copy(end = change.position)
@@ -268,11 +280,11 @@ fun Whiteboard(drawInfo: DrawInfo) {
                             }
                         }
 
-
                     }
                 )
             }
         ) {
+
             drawnItems.forEach { item ->
                 when (item.shape) {
                     Shape.Line, Shape.StraightLine -> {
