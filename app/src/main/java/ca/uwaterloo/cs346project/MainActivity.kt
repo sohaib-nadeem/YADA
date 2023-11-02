@@ -59,7 +59,8 @@ data class DrawnItem(
     val strokeWidth: Float = 4f,
     val filled: Boolean = false,
     var start: Offset = Offset(0f, 0f),
-    var end: Offset = Offset(0f, 0f)
+    var end: Offset = Offset(0f, 0f),
+    val points: MutableList<Offset> = mutableListOf()
 )
 
 // Contains attributes for pen and eraser as well as the drawing mode
@@ -207,7 +208,7 @@ fun Whiteboard(drawInfo: DrawInfo) {
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragEnd = {
-                        if (cachedDrawInfo.drawMode == DrawMode.Shape) {
+                        //if (cachedDrawInfo.drawMode == DrawMode.Shape) {
                             if (tempItem != null) {
                                 val currentDrawingState = drawnItems.toList()  // Store the current state
                                 undoStack.add(currentDrawingState)
@@ -215,7 +216,7 @@ fun Whiteboard(drawInfo: DrawInfo) {
                                 drawnItems.add(tempItem!!) // Add the single drawn item to the drawnItems
                                 tempItem = null
                             }
-                        }
+                        //}
                     },
 
                     onDragStart = { change ->
@@ -225,7 +226,8 @@ fun Whiteboard(drawInfo: DrawInfo) {
                             color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) canvasColor else cachedDrawInfo.color,
                             strokeWidth = cachedDrawInfo.strokeWidth,
                             start = change,
-                            end = change
+                            end = change,
+                            points = mutableListOf(change)
                         )
                     },
 
@@ -333,55 +335,6 @@ fun Whiteboard(drawInfo: DrawInfo) {
                 }
             }
 
-//            selectedItem?.let { item ->
-//                if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
-//                    //val cornerSize = item.strokeWidth + 40f
-//                    val cornerSize = 40f
-//                    val corners = listOf(
-//                        item.start,
-//                        Offset(item.end.x, item.start.y),
-//                        Offset(item.start.x, item.end.y),
-//                        item.end
-//                    )
-//                    corners.forEach { corner ->
-//                        drawRect(
-//                            color = Color.Red,  // Choose any color you like
-//                            topLeft = Offset(corner.x - cornerSize / 2, corner.y - cornerSize / 2),
-//                            size = Size(cornerSize, cornerSize),
-//                            style = Stroke(width = 5f)
-//                        )
-//                    }
-//                    // Draw the rectangle boundary of the selected oval
-//                    if (item.shape == Shape.Oval) {
-//                        drawRect(
-//                            color = Color.Red,
-//                            topLeft = item.start,
-//                            size = Size(item.end.x - item.start.x, item.end.y - item.start.y),
-//                            style = Stroke(
-//                                width = 3f,
-//                                //pathEffect = PathEffect.dashPathEffect(floatArrayOf(10f, 10f), 0f) // make rectangle outline dotted
-//                            )
-//                        )
-//                    }
-//                } else if (item.shape == Shape.StraightLine) {
-//                    val radius = 20f
-//                    val circleColor = Color.Red
-//
-//                    drawCircle(
-//                        color = circleColor,
-//                        center = item.start,
-//                        radius = radius,
-//                        style = Stroke(width = 5f)
-//                    )
-//
-//                    drawCircle(
-//                        color = circleColor,
-//                        center = item.end,
-//                        radius = radius,
-//                        style = Stroke(width = 5f)
-//                    )
-//                }
-//            }
             if (selectedItemIndex != -1) {
                 if (selectedItemIndex < drawnItems.size) {
                     val item = drawnItems[selectedItemIndex]
