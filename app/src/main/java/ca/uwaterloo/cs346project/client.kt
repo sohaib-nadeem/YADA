@@ -1,4 +1,5 @@
 package ca.uwaterloo.cs346project
+import androidx.compose.ui.geometry.Offset
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -16,16 +17,23 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
-import androidx.compose.ui.geometry.Offset
+
+@Serializable
 data class CanvasObject(
     val shape: Shape = Shape.Line,
     //val color: Color = Color.Black,
     val strokeWidth: Float = 4f,
-    var start: Offset = Offset(0f, 0f),
-    var end: Offset = Offset(0f, 0f)
+    var start: ca.uwaterloo.cs346project.Offset = ca.uwaterloo.cs346project.Offset(0f, 0f),
+    var end: ca.uwaterloo.cs346project.Offset = ca.uwaterloo.cs346project.Offset(0f, 0f)
 )
 
+@Serializable
+data class Offset (val x: Float, val y: Float)
+
 class Client {
+git clean
+    val server_ip = "169.254.22.221"
+
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(Json {
@@ -38,34 +46,37 @@ class Client {
     suspend fun join(): Int {
         var user_id = 0
         try {
-            user_id = client.get("http://10.32.20.234:8080/join/0").body()
+            user_id = client.get("http://$server_ip:8080/join/0").body()
             println("success joining")
         } catch (e: Exception) {
-            println("error joining")
+            println(e.localizedMessage)
         }
         return user_id
     }
 
-    suspend fun receive(): Int {
-        var items = 0
-        try {
-            items = client.get("http://10.32.20.234:8080/receive").body()
-        } catch (e: Exception) {
-            //println("error receiving")
-        }
-        return items
-    }
-
-    suspend fun send(item:DrawnItem) {
-        val itemToSend = CanvasObject(item.shape,item.strokeWidth,item.start, item.end)
+    suspend fun send(user_id:Int, item:DrawnItem) {
+        // convert DrawnItem to CanvasObject
+        val itemToSend = CanvasObject(item.shape,item.strokeWidth,
+            ca.uwaterloo.cs346project.Offset(item.start.x, item.start.y),
+            ca.uwaterloo.cs346project.Offset(item.end.x, item.end.y))
         println(item)
         try {
-            client.post("http://localhost:8080/send") {
+            val response = client.post("http://$server_ip:8080/send/$user_id") {
                 contentType(ContentType.Application.Json)
                 setBody(itemToSend)
             }
         } catch (e: Exception) {
-            println("error sending")
+            println(e.localizedMessage)
         }
+    }
+
+    suspend fun receive(user_id:Int): List<CanvasObject> {
+        var items = listOf<CanvasObject>()
+        try {
+           items = client.get("http://$server_ip:8080/receive/$user_id").body()
+        } catch (e: Exception) {
+            //println(e.localizedMessage)
+        }
+        return items
     }
 }

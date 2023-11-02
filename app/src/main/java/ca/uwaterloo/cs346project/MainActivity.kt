@@ -11,6 +11,8 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import ca.uwaterloo.cs346project.ui.theme.CS346ProjectTheme
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -18,6 +20,8 @@ import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
+
+var user_id = -1
 
 class MainActivity : ComponentActivity() {
     override fun onStop() {
@@ -37,7 +41,7 @@ class MainActivity : ComponentActivity() {
         }
 
         runBlocking {
-            Client().join()
+            user_id = Client().join()
         }
 
         setContent {
@@ -47,7 +51,12 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(true) {
                 scope.launch {
                     while (true) {
-                        val items = Client().receive()
+                        val item = Client().receive(user_id)
+                        for (i in item) {
+                            val drawing = DrawnItem(i.shape,
+                                Color.Black,i.strokeWidth,Offset(i.start.x,i.start.y),Offset(i.end.x,i.end.y))
+                            drawnItems.add(drawing)
+                        }
                         //drawnItems.addAll(items)
                         delay(100L)
                     }

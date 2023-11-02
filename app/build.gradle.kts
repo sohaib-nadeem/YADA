@@ -4,6 +4,7 @@ val kotlinx_coroutines_version: String by project
 plugins {
     id("com.android.application")
     id("org.jetbrains.kotlin.android")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 android {

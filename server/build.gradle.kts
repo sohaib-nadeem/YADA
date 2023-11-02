@@ -6,6 +6,7 @@ val junit_version: String by project
 plugins {
     application
     kotlin("jvm")
+    id("org.jetbrains.kotlin.plugin.serialization")
 }
 
 application {

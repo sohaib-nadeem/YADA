@@ -63,7 +63,7 @@ fun Whiteboard(drawInfo: DrawInfo) {
                             drawnItems.add(tempItem!!)
                             tempItem = null
                             scope.launch {
-                                Client().send(drawnItems.last())
+                                Client().send(user_id, drawnItems.last())
                             }
                         }
                     }
@@ -101,7 +101,7 @@ fun Whiteboard(drawInfo: DrawInfo) {
                             }
                             tempItem = tempItem?.copy(start = change.position)
                             scope.launch {
-                                Client().send(drawnItems.last())
+                                Client().send(user_id, drawnItems.last())
                             }
                         }
                         else if (cachedDrawInfo.drawMode == DrawMode.Shape) {

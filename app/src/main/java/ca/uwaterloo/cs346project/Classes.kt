@@ -3,6 +3,7 @@ package ca.uwaterloo.cs346project
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import kotlinx.serialization.Serializable
 import kotlin.math.max
 import kotlin.math.min
 import kotlin.math.sqrt
@@ -29,6 +30,7 @@ enum class DrawMode { Pen, Eraser, Shape }
 
 enum class ToolbarExtensionSetting { ColorSelection, StrokeWidthAdjustment, ShapeSelection, Hidden }
 
+@Serializable
 enum class Shape { Rectangle, Oval, Line, StraightLine }
 
 // Stores all the drawn items (lines, straight lines, rectangles, ovals, erasing lines)
