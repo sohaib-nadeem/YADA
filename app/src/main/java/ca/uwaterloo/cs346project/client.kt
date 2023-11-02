@@ -26,11 +26,28 @@ class Client {
             })
         }
     }
-    suspend fun receive(): List<DrawnItem?> {
-        return client.get("http://localhost:8080/receive").body()
+
+    suspend fun join(): Int {
+        var user_id = 0
+        try {
+            user_id = client.get("http://localhost:8080/join/0").body()
+        } catch (e: Exception) {
+            println("error joining")
+        }
+        return user_id
     }
 
-    suspend fun send(item:DrawnItem?) {
+    suspend fun receive(): List<DrawnItem> {
+        var items = listOf<DrawnItem>()
+        try {
+            items = client.get("http://localhost:8080/receive").body()
+        } catch (e: Exception) {
+            println("error receiving")
+        }
+        return items
+    }
+
+    suspend fun send(item:DrawnItem) {
         println(item)
         try {
             client.post("http://localhost:8080/send") {

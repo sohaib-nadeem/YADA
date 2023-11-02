@@ -14,6 +14,9 @@ import androidx.compose.ui.Modifier
 import ca.uwaterloo.cs346project.ui.theme.CS346ProjectTheme
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
 import java.io.File
 
 class MainActivity : ComponentActivity() {
@@ -33,13 +36,24 @@ class MainActivity : ComponentActivity() {
             drawnItems = Gson().fromJson(json, type)
         }
 
+        runBlocking {
+            Client().join()
+        }
+
         setContent {
-            scope.launch {
-                while(true) {
-                    Client().receive()
-                };
-            }
             var drawInfo by remember { mutableStateOf(DrawInfo()) }
+            val scope = rememberCoroutineScope()
+
+            LaunchedEffect(true) {
+                scope.launch {
+                    while (true) {
+                        val items = Client().receive()
+                        drawnItems.addAll(items)
+                        delay(100L)
+                    }
+                }
+            }
+
             CS346ProjectTheme {
                 Box {
                     Row(modifier = Modifier
