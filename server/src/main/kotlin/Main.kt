@@ -27,7 +27,7 @@ fun main() {
     println("Starting server...")
     var userIndices = mutableListOf<Int>()
     var objectList = mutableListOf<CanvasObject>()
-    embeddedServer(Netty, port = 8080, host = "127.0.0.1") {
+    embeddedServer(Netty, port = 8080, host = "10.32.20.234") {
         install(ContentNegotiation) {
             json(Json {
                 prettyPrint = true
@@ -56,21 +56,8 @@ fun main() {
             }
             get("/receive/{user_id}") {
                 println("receive called")
-                if (call.parameters["user_id"] == null) {
-                    // fail
-                }
-                else {
-                    val user_id = call.parameters["user_id"]!!.toInt()
-                    var objectsToSend = listOf<CanvasObject>()
-                    if (userIndices[user_id] < objectList.size) {
-                        objectsToSend = objectList.subList(
-                            userIndices[user_id],
-                            objectList.size
-                        ) // send everything at once???; safety check that < objectList.size
-                        userIndices[user_id] = objectList.size
-                    }
-                    call.respond(objectsToSend)
-                }
+
+                    call.respond(50)
             }
         }
     }.start(wait = true)

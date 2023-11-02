@@ -16,6 +16,14 @@ import io.ktor.serialization.kotlinx.json.*
 import kotlinx.coroutines.*
 import kotlinx.serialization.*
 import kotlinx.serialization.json.*
+import androidx.compose.ui.geometry.Offset
+data class CanvasObject(
+    val shape: Shape = Shape.Line,
+    //val color: Color = Color.Black,
+    val strokeWidth: Float = 4f,
+    var start: Offset = Offset(0f, 0f),
+    var end: Offset = Offset(0f, 0f)
+)
 
 class Client {
     private val client = HttpClient(CIO) {
@@ -30,29 +38,31 @@ class Client {
     suspend fun join(): Int {
         var user_id = 0
         try {
-            user_id = client.get("http://localhost:8080/join/0").body()
+            user_id = client.get("http://10.32.20.234:8080/join/0").body()
+            println("success joining")
         } catch (e: Exception) {
             println("error joining")
         }
         return user_id
     }
 
-    suspend fun receive(): List<DrawnItem> {
-        var items = listOf<DrawnItem>()
+    suspend fun receive(): Int {
+        var items = 0
         try {
-            items = client.get("http://localhost:8080/receive").body()
+            items = client.get("http://10.32.20.234:8080/receive").body()
         } catch (e: Exception) {
-            println("error receiving")
+            //println("error receiving")
         }
         return items
     }
 
     suspend fun send(item:DrawnItem) {
+        val itemToSend = CanvasObject(item.shape,item.strokeWidth,item.start, item.end)
         println(item)
         try {
             client.post("http://localhost:8080/send") {
                 contentType(ContentType.Application.Json)
-                setBody(item)
+                setBody(itemToSend)
             }
         } catch (e: Exception) {
             println("error sending")

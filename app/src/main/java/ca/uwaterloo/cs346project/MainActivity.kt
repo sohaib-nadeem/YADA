@@ -48,7 +48,7 @@ class MainActivity : ComponentActivity() {
                 scope.launch {
                     while (true) {
                         val items = Client().receive()
-                        drawnItems.addAll(items)
+                        //drawnItems.addAll(items)
                         delay(100L)
                     }
                 }
