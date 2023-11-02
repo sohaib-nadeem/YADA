@@ -179,6 +179,11 @@ fun Whiteboard(drawInfo: DrawInfo) {
     var tempItem by remember { mutableStateOf<DrawnItem?>(null) }
     var selectedItemIndex by remember { mutableStateOf(-1) }
 
+    var undoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf()) }
+    var redoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf()) }
+
+
+
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.TopEnd
@@ -198,12 +203,16 @@ fun Whiteboard(drawInfo: DrawInfo) {
                 )
             }
 
+
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragEnd = {
                         if (cachedDrawInfo.drawMode == DrawMode.Shape) {
                             if (tempItem != null) {
-                                drawnItems.add(tempItem!!)
+                                val currentDrawingState = drawnItems.toList()  // Store the current state
+                                undoStack.add(currentDrawingState)
+                                redoStack.clear()
+                                drawnItems.add(tempItem!!) // Add the single drawn item to the drawnItems
                                 tempItem = null
                             }
                         }
@@ -250,6 +259,10 @@ fun Whiteboard(drawInfo: DrawInfo) {
                     }
                 )
             }
+
+
+
+
         ) {
             drawnItems.forEach { item ->
                 when (item.shape) {
@@ -431,7 +444,14 @@ fun Whiteboard(drawInfo: DrawInfo) {
             modifier = Modifier.padding(8.dp)
         ) {
             // Undo button
-            IconButton(onClick = { /* Handle undo */ }) {
+            IconButton(onClick = { /* Handle undo */
+                if (undoStack.isNotEmpty()) {
+                    redoStack.add(drawnItems.toList()) // Add the current state to redo stack
+                    drawnItems.clear()
+                    drawnItems.addAll(undoStack.removeAt(undoStack.lastIndex))}
+
+
+            }) {
                 Icon(painterResource(id = R.drawable.undo_24px), contentDescription = "Undo", modifier = Modifier
                     .background(
                         color = Color.LightGray,
@@ -442,7 +462,13 @@ fun Whiteboard(drawInfo: DrawInfo) {
             }
 
             // Redo button
-            IconButton(onClick = { /* Handle redo */ }) {
+            IconButton(onClick = { /* Handle redo */
+                if (redoStack.isNotEmpty()) {
+                    undoStack.add(drawnItems.toList()) // Add the current state to undo stack
+                    drawnItems.clear()
+                    drawnItems.addAll(redoStack.removeAt(redoStack.lastIndex))}
+
+            }) {
                 Icon(painterResource(id = R.drawable.redo_24px), contentDescription = "Redo", modifier = Modifier
                     .background(
                         color = Color.LightGray,
