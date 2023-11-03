@@ -31,7 +31,6 @@ data class CanvasObject(
 data class Offset (val x: Float, val y: Float)
 
 class Client {
-git clean
     val server_ip = "169.254.22.221"
 
     private val client = HttpClient(CIO) {
