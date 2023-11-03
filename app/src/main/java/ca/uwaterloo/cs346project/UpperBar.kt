@@ -30,7 +30,7 @@ fun UpperBarIconButton(icon: ImageVector, color: Color, onClick: () -> Unit) {
 }
 
 @Composable
-fun UpperBar() {
+fun UpperBar(undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>) {
     Row(
         horizontalArrangement = Arrangement.End,
         verticalAlignment = Alignment.Top,
@@ -39,16 +39,26 @@ fun UpperBar() {
     ) {
         // Undo button
         UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.undo_24px), color = Color.LightGray) {
-            /* Handle undo */
+            if (undoStack.size>1) {
+                drawnItems.clear()
+                redoStack.add(undoStack.removeAt(undoStack.lastIndex))
+                drawnItems.addAll(undoStack.last())
+            }
         }
 
         // Redo button
         UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.redo_24px), color = Color.LightGray) {
-            /* Handle undo */
+            if (redoStack.isNotEmpty()) {
+                drawnItems.clear()
+                undoStack.add(redoStack.removeAt(redoStack.lastIndex))
+                drawnItems.addAll(undoStack.last())
+            }
         }
 
         UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.delete_24px), color = Color.LightGray) {
             drawnItems.clear()
+            undoStack.add(drawnItems.toList())
+            redoStack.clear()
         }
 
         /*

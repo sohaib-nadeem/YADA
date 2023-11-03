@@ -47,6 +47,8 @@ class MainActivity : ComponentActivity() {
         setContent {
             var drawInfo by remember { mutableStateOf(DrawInfo()) }
             val scope = rememberCoroutineScope()
+            var undoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf(emptyList())) }
+            var redoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf()) }
 
             LaunchedEffect(true) {
                 scope.launch {
@@ -69,10 +71,10 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .align(Alignment.TopCenter)
                     ) {
-                        Whiteboard(drawInfo)
+                        Whiteboard(drawInfo, undoStack, redoStack)
                     }
 
-                    UpperBar()
+                    UpperBar(undoStack, redoStack)
 
                     Row(modifier = Modifier
                         .fillMaxWidth()
