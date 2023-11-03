@@ -32,7 +32,7 @@ import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 @Composable
-fun Whiteboard(drawInfo: DrawInfo) {
+fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>) {
     val canvasColor = Color.White
     var cachedDrawInfo by remember { mutableStateOf(DrawInfo()) }
     cachedDrawInfo = drawInfo
@@ -67,7 +67,8 @@ fun Whiteboard(drawInfo: DrawInfo) {
                             }
                         }
                     }
-
+                    undoStack.add(drawnItems.toList())
+                    redoStack.clear()
 
                 },
 
