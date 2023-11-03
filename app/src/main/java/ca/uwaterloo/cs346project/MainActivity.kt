@@ -60,7 +60,7 @@ data class DrawnItem(
     val filled: Boolean = false,
     var start: Offset = Offset(0f, 0f),
     var end: Offset = Offset(0f, 0f),
-    val points: MutableList<Offset> = mutableListOf()
+
 )
 
 // Contains attributes for pen and eraser as well as the drawing mode
@@ -180,7 +180,10 @@ fun Whiteboard(drawInfo: DrawInfo) {
     var tempItem by remember { mutableStateOf<DrawnItem?>(null) }
     var selectedItemIndex by remember { mutableStateOf(-1) }
 
-    var undoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf()) }
+
+    var prevDrawingState by remember { mutableStateOf<List<DrawnItem>>(listOf()) }
+
+    var undoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf(emptyList())) }
     var redoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf()) }
 
 
@@ -208,15 +211,16 @@ fun Whiteboard(drawInfo: DrawInfo) {
             .pointerInput(Unit) {
                 detectDragGestures(
                     onDragEnd = {
-                        //if (cachedDrawInfo.drawMode == DrawMode.Shape) {
+                        if (cachedDrawInfo.drawMode == DrawMode.Shape) {
                             if (tempItem != null) {
-                                val currentDrawingState = drawnItems.toList()  // Store the current state
-                                undoStack.add(currentDrawingState)
-                                redoStack.clear()
                                 drawnItems.add(tempItem!!) // Add the single drawn item to the drawnItems
                                 tempItem = null
                             }
-                        //}
+
+                        }
+                        undoStack.add(drawnItems.toList())
+                        redoStack.clear()
+                        //prevDrawingState = drawnItems.toList()
                     },
 
                     onDragStart = { change ->
@@ -226,8 +230,8 @@ fun Whiteboard(drawInfo: DrawInfo) {
                             color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) canvasColor else cachedDrawInfo.color,
                             strokeWidth = cachedDrawInfo.strokeWidth,
                             start = change,
-                            end = change,
-                            points = mutableListOf(change)
+                            end = change
+
                         )
                     },
 
@@ -398,10 +402,12 @@ fun Whiteboard(drawInfo: DrawInfo) {
         ) {
             // Undo button
             IconButton(onClick = { /* Handle undo */
-                if (undoStack.isNotEmpty()) {
-                    redoStack.add(drawnItems.toList()) // Add the current state to redo stack
+                if (undoStack.size>1) {
+                    //redoStack.add(drawnItems.toList()) // Add the current state to redo stack
                     drawnItems.clear()
-                    drawnItems.addAll(undoStack.removeAt(undoStack.lastIndex))}
+                    redoStack.add(undoStack.removeAt(undoStack.lastIndex))
+                    drawnItems.addAll(undoStack.last())
+                }
 
 
             }) {
@@ -417,9 +423,11 @@ fun Whiteboard(drawInfo: DrawInfo) {
             // Redo button
             IconButton(onClick = { /* Handle redo */
                 if (redoStack.isNotEmpty()) {
-                    undoStack.add(drawnItems.toList()) // Add the current state to undo stack
+                    //undoStack.add(drawnItems.toList()) // Add the current state to undo stack
                     drawnItems.clear()
-                    drawnItems.addAll(redoStack.removeAt(redoStack.lastIndex))}
+                    undoStack.add(redoStack.removeAt(redoStack.lastIndex))
+                    drawnItems.addAll(undoStack.last())
+                }
 
             }) {
                 Icon(painterResource(id = R.drawable.redo_24px), contentDescription = "Redo", modifier = Modifier
@@ -434,6 +442,8 @@ fun Whiteboard(drawInfo: DrawInfo) {
             // Delete page button
             IconButton(onClick = {
                 drawnItems.clear()
+                undoStack.add(drawnItems.toList())
+                redoStack.clear()
             }) {
                 Icon(painterResource(id = R.drawable.delete_24px), contentDescription = "Delete", modifier = Modifier
                     .background(
