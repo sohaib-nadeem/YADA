@@ -55,8 +55,12 @@ class MainActivity : ComponentActivity() {
                     while (true) {
                         val item = Client().receive(user_id)
                         for (i in item) {
-                            val drawing = DrawnItem(i.shape,
-                                Color.Black,i.strokeWidth,Offset(i.start.x,i.start.y),Offset(i.end.x,i.end.y))
+                            val drawing = DrawnItem(
+                                i.shape,
+                                Color.Black,
+                                i.strokeWidth,
+                                mutableStateListOf()
+                            )
                             drawnItems.add(drawing)
                         }
                         //drawnItems.addAll(items)

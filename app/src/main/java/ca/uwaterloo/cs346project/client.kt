@@ -55,9 +55,13 @@ class Client {
 
     suspend fun send(user_id:Int, item:DrawnItem) {
         // convert DrawnItem to CanvasObject
+//        val itemToSend = CanvasObject(item.shape,item.strokeWidth,
+//            ca.uwaterloo.cs346project.Offset(item.start.x, item.start.y),
+//            ca.uwaterloo.cs346project.Offset(item.end.x, item.end.y))
+
         val itemToSend = CanvasObject(item.shape,item.strokeWidth,
-            ca.uwaterloo.cs346project.Offset(item.start.x, item.start.y),
-            ca.uwaterloo.cs346project.Offset(item.end.x, item.end.y))
+            ca.uwaterloo.cs346project.Offset(item.segmentPoints[0].first.x, item.segmentPoints[0].first.y),
+            ca.uwaterloo.cs346project.Offset(item.segmentPoints[0].second.x, item.segmentPoints[0].second.y))
         println(item)
         try {
             val response = client.post("http://$server_ip:8080/send/$user_id") {

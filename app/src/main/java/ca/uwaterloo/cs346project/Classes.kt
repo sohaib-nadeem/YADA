@@ -1,6 +1,8 @@
 package ca.uwaterloo.cs346project
 
 import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import kotlinx.serialization.Serializable
@@ -10,25 +12,25 @@ import kotlin.math.sqrt
 
 data class DrawnItem(
     val shape: Shape = Shape.Line,
-    val color: Color = Color.Black,
+    var color: Color = Color.Black,
     val strokeWidth: Float = 4f,
-    var start: Offset = Offset(0f, 0f),
-    var end: Offset = Offset(0f, 0f)
+    val segmentPoints : SnapshotStateList<Pair<Offset, Offset>> = mutableStateListOf()
 )
+
 
 // Contains attributes for pen and eraser as well as the drawing mode
 data class DrawInfo (
     val drawMode: DrawMode = DrawMode.Pen,
     val shape: Shape = Shape.Line,
     val color: Color = Color.Black,
-    val strokeWidth: Float = 4f
+    val strokeWidth: Float = 4f,
 )
 
 const val MAX_STROKE_WIDTH = 140f
 
-enum class DrawMode { Pen, Eraser, Shape }
+enum class DrawMode { Pen, Eraser, Shape, CanvasDrag, Selection }
 
-enum class ToolbarExtensionSetting { ColorSelection, StrokeWidthAdjustment, ShapeSelection, Hidden }
+enum class ToolbarExtensionSetting { ColorSelection, StrokeWidthAdjustment, ShapeSelection, SelectorTool, Hidden }
 
 @Serializable
 enum class Shape { Rectangle, Oval, Line, StraightLine }
@@ -42,11 +44,18 @@ fun isPointCloseToRectangle(point: Offset, item: DrawnItem): Boolean {
     if (item.shape != Shape.Rectangle && item.shape != Shape.Oval) {
         return false
     }
+    if (item.segmentPoints.isEmpty()) {
+        return false
+    }
+
+    val start = item.segmentPoints[0].first
+    val end = item.segmentPoints[0].second
+
     val margin = 100f
-    val minX = min(item.start.x, item.end.x)
-    val maxX = max(item.start.x, item.end.x)
-    val minY = min(item.start.y, item.end.y)
-    val maxY = max(item.start.y, item.end.y)
+    val minX = min(start.x, end.x)
+    val maxX = max(start.x, end.x)
+    val minY = min(start.y, end.y)
+    val maxY = max(start.y, end.y)
     return point.x in (minX - margin)..(maxX + margin) && point.y in (minY - margin)..(maxY + margin) &&
             !(point.x in (minX + margin)..(maxX - margin) && point.y in (minY + margin)..(maxY - margin))
 }
@@ -57,11 +66,17 @@ fun isPointCloseToLine(point: Offset, item: DrawnItem): Boolean {
     if (item.shape != Shape.StraightLine) {
         return false
     }
+    if (item.segmentPoints.isEmpty()) {
+        return false
+    }
 
-    val x1 = item.start.x
-    val y1 = item.start.y
-    val x2 = item.end.x
-    val y2 = item.end.y
+    val start = item.segmentPoints[0].first
+    val end = item.segmentPoints[0].second
+
+    val x1 = start.x
+    val y1 = start.y
+    val x2 = end.x
+    val y2 = end.y
     val px = point.x
     val py = point.y
 
