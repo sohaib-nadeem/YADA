@@ -14,7 +14,8 @@ data class DrawnItem(
     val shape: Shape = Shape.Line,
     var color: Color = Color.Black,
     val strokeWidth: Float = 4f,
-    val segmentPoints : SnapshotStateList<Pair<Offset, Offset>> = mutableStateListOf()
+//    val segmentPoints : SnapshotStateList<Pair<Offset, Offset>> = mutableStateListOf()
+    val segmentPoints : SnapshotStateList<Offset> = mutableStateListOf()
 )
 
 
@@ -44,12 +45,12 @@ fun isPointCloseToRectangle(point: Offset, item: DrawnItem): Boolean {
     if (item.shape != Shape.Rectangle && item.shape != Shape.Oval) {
         return false
     }
-    if (item.segmentPoints.isEmpty()) {
+    if (item.segmentPoints.size < 2) {
         return false
     }
 
-    val start = item.segmentPoints[0].first
-    val end = item.segmentPoints[0].second
+    val start = item.segmentPoints[0]
+    val end = item.segmentPoints[1]
 
     val margin = 100f
     val minX = min(start.x, end.x)
@@ -61,17 +62,18 @@ fun isPointCloseToRectangle(point: Offset, item: DrawnItem): Boolean {
 }
 
 
+
 // Checks if a point is close enough to a straight line
 fun isPointCloseToLine(point: Offset, item: DrawnItem): Boolean {
     if (item.shape != Shape.StraightLine) {
         return false
     }
-    if (item.segmentPoints.isEmpty()) {
+    if (item.segmentPoints.size < 2) {
         return false
     }
 
-    val start = item.segmentPoints[0].first
-    val end = item.segmentPoints[0].second
+    val start = item.segmentPoints[0]
+    val end = item.segmentPoints[1]
 
     val x1 = start.x
     val y1 = start.y

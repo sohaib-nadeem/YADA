@@ -41,7 +41,8 @@ class MainActivity : ComponentActivity() {
         }
 
         runBlocking {
-            user_id = Client().join()
+            //user_id = Client().join()
+            user_id = Client().fakeJoin()
         }
 
         setContent {
@@ -53,7 +54,9 @@ class MainActivity : ComponentActivity() {
             LaunchedEffect(true) {
                 scope.launch {
                     while (true) {
-                        val item = Client().receive(user_id)
+                        //val item = Client().receive(user_id)
+                        val item = Client().fakeReceive(user_id)
+                        /*
                         for (i in item) {
                             val drawing = DrawnItem(
                                 i.shape,
@@ -63,6 +66,7 @@ class MainActivity : ComponentActivity() {
                             )
                             drawnItems.add(drawing)
                         }
+                        */
                         //drawnItems.addAll(items)
                         delay(100L)
                     }

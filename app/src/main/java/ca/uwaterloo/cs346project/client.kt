@@ -60,8 +60,8 @@ class Client {
 //            ca.uwaterloo.cs346project.Offset(item.end.x, item.end.y))
 
         val itemToSend = CanvasObject(item.shape,item.strokeWidth,
-            ca.uwaterloo.cs346project.Offset(item.segmentPoints[0].first.x, item.segmentPoints[0].first.y),
-            ca.uwaterloo.cs346project.Offset(item.segmentPoints[0].second.x, item.segmentPoints[0].second.y))
+            ca.uwaterloo.cs346project.Offset(item.segmentPoints.first().x, item.segmentPoints.first().y),
+            ca.uwaterloo.cs346project.Offset(item.segmentPoints.last().x, item.segmentPoints.last().y))
         println(item)
         try {
             val response = client.post("http://$server_ip:8080/send/$user_id") {
@@ -82,4 +82,20 @@ class Client {
         }
         return items
     }
+
+
+    suspend fun fakeJoin(): Int {
+        return 0
+    }
+
+    suspend fun fakeSend(user_id:Int, item:DrawnItem) {
+        return
+    }
+
+    suspend fun fakeReceive(user_id:Int): List<CanvasObject> {
+        return listOf()
+    }
+
 }
+
+
