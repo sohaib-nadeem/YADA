@@ -128,20 +128,39 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
         ) {
             // Pen Button
             ToolbarIconButton(Icons.Filled.Create, selected = (drawInfo.drawMode == DrawMode.Pen)) {
-                setDrawInfo(drawInfo.copy(drawMode = DrawMode.Pen, shape = Shape.Line))
+                if (drawInfo.drawMode == DrawMode.Pen) {
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.CanvasDrag))
+                } else {
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Pen, shape = Shape.Line))
+                }
                 toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
             }
 
             // Eraser Button
             ToolbarIconButton(ImageVector.vectorResource(id = R.drawable.ink_eraser_24px), selected = (drawInfo.drawMode == DrawMode.Eraser)) {
-                setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser, shape = Shape.Line))
-                toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
+                if (drawInfo.drawMode == DrawMode.Eraser) {
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.CanvasDrag))
+                } else {
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser))
+                }
+            }
+
+            // Selector Tool Button
+            ToolbarIconButton(ImageVector.vectorResource(id = R.drawable.lasso_select_24px), selected = (toolbarExtensionSetting == ToolbarExtensionSetting.SelectorTool)) {
+                if (toolbarExtensionSetting == ToolbarExtensionSetting.SelectorTool) {
+                    toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.CanvasDrag))
+                } else {
+                    toolbarExtensionSetting = ToolbarExtensionSetting.SelectorTool
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Selection))
+                }
             }
 
             // Shapes Selection Button
-            ToolbarIconButton(icon = Icons.Outlined.ShapeLine, selected = (drawInfo.drawMode == DrawMode.Shape)) {
+            ToolbarIconButton(icon = Icons.Outlined.ShapeLine, selected = (drawInfo.drawMode == DrawMode.Shape && toolbarExtensionSetting == ToolbarExtensionSetting.ShapeSelection)) {
                 if (toolbarExtensionSetting == ToolbarExtensionSetting.ShapeSelection) {
                     toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.CanvasDrag))
                 } else {
                     toolbarExtensionSetting = ToolbarExtensionSetting.ShapeSelection
                     setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.Rectangle)) // Default shape
