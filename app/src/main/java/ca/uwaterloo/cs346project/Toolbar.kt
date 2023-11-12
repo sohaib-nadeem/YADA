@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.outlined.Circle
 import androidx.compose.material.icons.outlined.LineWeight
 import androidx.compose.material.icons.outlined.Palette
@@ -17,10 +18,12 @@ import androidx.compose.material.icons.outlined.Rectangle
 import androidx.compose.material.icons.outlined.ShapeLine
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.Checkbox
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Slider
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -115,6 +118,7 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
                     ToolbarIconButton(ImageVector.vectorResource(id = R.drawable.pen_size_3_24px), selected = (drawInfo.shape == Shape.StraightLine)) {
                         setDrawInfo(drawInfo.copy(drawMode = DrawMode.Shape, shape = Shape.StraightLine))
                     }
+
                 }
             }
         }
@@ -138,10 +142,11 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
 
             // Eraser Button
             ToolbarIconButton(ImageVector.vectorResource(id = R.drawable.ink_eraser_24px), selected = (drawInfo.drawMode == DrawMode.Eraser)) {
+                // ORIGINAL
                 if (drawInfo.drawMode == DrawMode.Eraser) {
-                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.CanvasDrag))
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.CanvasDrag, shape = Shape.Line))
                 } else {
-                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser))
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser, shape = Shape.Line))
                 }
             }
 
