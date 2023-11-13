@@ -1,7 +1,6 @@
 package ca.uwaterloo.cs346project
 
 import androidx.compose.runtime.mutableStateListOf
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
@@ -33,6 +32,7 @@ enum class DrawMode { Pen, Eraser, Shape, CanvasDrag, Selection }
 
 enum class ToolbarExtensionSetting { ColorSelection, StrokeWidthAdjustment, ShapeSelection, SelectorTool, Hidden }
 
+enum class CurrentPage {HomePage, WhiteboardPage}
 @Serializable
 enum class Shape { Rectangle, Oval, Line, StraightLine }
 
