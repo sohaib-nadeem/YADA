@@ -47,7 +47,7 @@ fun UpperBar(undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<Lis
                     .padding(8.dp)
                     .fillMaxWidth()
             ) {
-                UpperBarIconButton(icon = ImageVector.vectorResource(id = R.drawable.undo_24px), color = Color.LightGray) {
+                UpperBarIconButton(icon = ImageVector.vectorResource(id = R.drawable.arrow_back_24px), color = Color.LightGray) {
                     curPage.value = CurrentPage.HomePage
                 }
             }
