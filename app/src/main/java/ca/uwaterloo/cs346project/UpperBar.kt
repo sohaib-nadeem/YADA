@@ -67,7 +67,6 @@ fun UpperBar(undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<Lis
                         redoStack.add(undoStack.removeAt(undoStack.lastIndex))
                         drawnItems.addAll(undoStack.last())
                     }
-                    println("hi2")
                 }
 
                 // Redo button

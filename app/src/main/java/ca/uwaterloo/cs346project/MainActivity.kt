@@ -85,24 +85,7 @@ class MainActivity : ComponentActivity() {
                         .align(Alignment.TopCenter)
                     ) {
                         if (curPage.value == CurrentPage.HomePage) {
-                            Box(modifier = Modifier
-                                .fillMaxSize()
-                                .background(Color.White)) {
-                                Column(modifier = Modifier.fillMaxSize(),
-                                    verticalArrangement = Arrangement.SpaceEvenly,
-                                    horizontalAlignment = Alignment.CenterHorizontally) {
-                                        Text(text = "Whiteboard", fontSize = 50.sp)
-                                        OutlinedButton(onClick = { curPage.value = CurrentPage.WhiteboardPage },
-                                            modifier = Modifier.width(140.dp)) {
-                                            Text("New Canvas")
-                                        }
-                                        Button(onClick = { curPage.value = CurrentPage.WhiteboardPage },
-                                            modifier = Modifier.offset(y = (-150).dp)
-                                                .width(140.dp)) {
-                                            Text("Open Previous")
-                                        }
-                                    }
-                                }
+                            HomePage(curPage)
                         } else if (curPage.value == CurrentPage.WhiteboardPage) {
                             Whiteboard(drawInfo, undoStack, redoStack)
                         }
