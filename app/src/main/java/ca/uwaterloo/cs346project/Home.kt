@@ -13,8 +13,11 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextField
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -30,8 +33,10 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
+    var showSessionIDBox by remember { mutableStateOf(false)}
     BoxWithConstraints {
         if (maxWidth < maxHeight) {
             // "Portrait"
@@ -41,24 +46,42 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                 Column(modifier = Modifier.fillMaxSize(),
                     verticalArrangement = Arrangement.SpaceEvenly,
                     horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(text = "Whiteboard", fontSize = 50.sp)
-                    OutlinedButton(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
-                        modifier = Modifier
-                            .width(300.dp)
-                            .height(80.dp)) {
-                        Text("New Canvas", fontSize=25.sp)
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Text(text = "Whiteboard", fontSize = 50.sp)
                     }
-                    Button(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
-                        modifier = Modifier
-                            .width(300.dp)
-                            .height(80.dp)) {
-                        Text("Open Previous", fontSize=25.sp)
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedButton(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
+                            modifier = Modifier
+                                .width(300.dp)
+                                .height(80.dp)) {
+                            Text("New Canvas", fontSize=25.sp)
+                        }
                     }
-                    OutlinedButton(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
-                        modifier = Modifier
-                            .width(300.dp)
-                            .height(80.dp)) {
-                        Text("Join Session", fontSize=25.sp)
+                    Box(modifier = Modifier.weight(1f)) {
+                        Button(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
+                            modifier = Modifier
+                                .width(300.dp)
+                                .height(80.dp)) {
+                            Text("Open Previous", fontSize=25.sp)
+                        }
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
+                        OutlinedButton(onClick = { showSessionIDBox = !showSessionIDBox},
+                            modifier = Modifier
+                                .width(300.dp)
+                                .height(80.dp)) {
+                            Text("Join Session", fontSize=25.sp)
+                        }
+                    }
+                    var text by remember { mutableStateOf("") }
+                    Box(modifier = Modifier.weight(1f)) {
+                        if (showSessionIDBox) {
+                            TextField(
+                                value = text,
+                                onValueChange = { text = it },
+                                label = { Text("Session ID") }
+                            )
+                        }
                     }
                 }
             }
@@ -67,9 +90,21 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
             Row(modifier = Modifier.fillMaxSize(),
                 horizontalArrangement = Arrangement.SpaceEvenly,
                 verticalAlignment = Alignment.CenterVertically) {
-                Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
-                    Text(text = "Whiteboard", fontSize = 50.sp)
-                }
+                    Column(modifier = Modifier.weight(1f).fillMaxSize(),
+                        horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(text = "Whiteboard", fontSize = 50.sp, modifier = Modifier.offset(y=(100).dp))
+                        if (showSessionIDBox) {
+                            var text by remember { mutableStateOf("") }
+                            TextField(
+                                value = text,
+                                onValueChange = { text = it },
+                                label = { Text("Session ID")},
+                                modifier = Modifier.offset(y=130.dp)
+                            )
+                        }
+                    }
+
+
                 Box(modifier = Modifier.weight(1f)) {
                     Column(modifier = Modifier.fillMaxSize(),
                         verticalArrangement = Arrangement.SpaceEvenly,
@@ -86,7 +121,7 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                                 .height(80.dp)) {
                             Text("Open Previous", fontSize=25.sp)
                         }
-                        OutlinedButton(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
+                        OutlinedButton(onClick = { showSessionIDBox = !showSessionIDBox},
                             modifier = Modifier
                                 .width(300.dp)
                                 .height(80.dp)) {
