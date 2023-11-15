@@ -54,7 +54,7 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             var undoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf(emptyList())) }
             var redoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf()) }
-            var curPage = remember { mutableStateOf(CurrentPage.HomePage) }
+            var page by remember { mutableStateOf(Pg()) }
             LaunchedEffect(true) {
                 scope.launch {
                     while (true) {
@@ -84,14 +84,14 @@ class MainActivity : ComponentActivity() {
                         .fillMaxSize()
                         .align(Alignment.TopCenter)
                     ) {
-                        if (curPage.value == CurrentPage.HomePage) {
-                            HomePage(curPage)
-                        } else if (curPage.value == CurrentPage.WhiteboardPage) {
+                        if (page.curPage == CurrentPage.HomePage) {
+                            HomePage(page, setPage = {page = it})
+                        } else if (page.curPage == CurrentPage.WhiteboardPage) {
                             Whiteboard(drawInfo, undoStack, redoStack)
                         }
                     }
-                    if (curPage.value == CurrentPage.WhiteboardPage) {
-                        UpperBar(undoStack,redoStack,curPage)
+                    if (page.curPage == CurrentPage.WhiteboardPage) {
+                        UpperBar(undoStack,redoStack,page, setPage = {page = it})
 
                         Row(modifier = Modifier
                             .fillMaxWidth()

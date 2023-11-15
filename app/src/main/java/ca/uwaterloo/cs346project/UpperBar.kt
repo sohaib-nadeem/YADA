@@ -11,6 +11,10 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -32,7 +36,7 @@ fun UpperBarIconButton(icon: ImageVector, color: Color, onClick: () -> Unit) {
 }
 
 @Composable
-fun UpperBar(undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>, curPage: MutableState<CurrentPage>) {
+fun UpperBar(undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>, page: Pg, setPage: (Pg) -> Unit) {
     Row(horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.Top,
         modifier = Modifier
@@ -48,7 +52,7 @@ fun UpperBar(undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<Lis
                     .fillMaxWidth()
             ) {
                 UpperBarIconButton(icon = ImageVector.vectorResource(id = R.drawable.arrow_back_24px), color = Color.LightGray) {
-                    curPage.value = CurrentPage.HomePage
+                    setPage(page.copy(curPage = CurrentPage.HomePage))
                 }
             }
         }
@@ -83,57 +87,7 @@ fun UpperBar(undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<Lis
                     undoStack.add(drawnItems.toList())
                     redoStack.clear()
                 }
-
-                /*
-                UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.settings_24px), color = Color.LightGray) {
-                    /* Handle setting */
-                }
-                */
             }
         }
     }
-
-/*
-    Row(
-        horizontalArrangement = Arrangement.End,
-        verticalAlignment = Alignment.Top,
-        modifier = Modifier
-            .padding(8.dp)
-            .fillMaxWidth()
-    ) {
-        // Undo button
-        UpperBarIconButton(icon = ImageVector.vectorResource(id = R.drawable.undo_24px), color = Color.LightGray, mod = Modifier.offset(x=(-180).dp)) {
-            curPage.value = CurrentPage.HomePage
-        }
-        UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.undo_24px), color = Color.LightGray, mod = Modifier) {
-            if (undoStack.size>1) {
-                drawnItems.clear()
-                redoStack.add(undoStack.removeAt(undoStack.lastIndex))
-                drawnItems.addAll(undoStack.last())
-            }
-            println("hi2")
-        }
-
-        // Redo button
-        UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.redo_24px), color = Color.LightGray, mod = Modifier) {
-            if (redoStack.isNotEmpty()) {
-                drawnItems.clear()
-                undoStack.add(redoStack.removeAt(redoStack.lastIndex))
-                drawnItems.addAll(undoStack.last())
-            }
-        }
-
-        UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.delete_24px), color = Color.LightGray, mod = Modifier) {
-            drawnItems.clear()
-            undoStack.add(drawnItems.toList())
-            redoStack.clear()
-        }
-
-        /*
-        UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.settings_24px), color = Color.LightGray) {
-            /* Handle setting */
-        }
-        */
-    }
-*/
 }

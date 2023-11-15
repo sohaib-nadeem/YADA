@@ -33,6 +33,9 @@ enum class DrawMode { Pen, Eraser, Shape, CanvasDrag, Selection }
 enum class ToolbarExtensionSetting { ColorSelection, StrokeWidthAdjustment, ShapeSelection, SelectorTool, Hidden }
 
 enum class CurrentPage {HomePage, WhiteboardPage}
+data class Pg (
+    var curPage : CurrentPage = CurrentPage.HomePage
+)
 @Serializable
 enum class Shape { Rectangle, Oval, Line, StraightLine }
 
