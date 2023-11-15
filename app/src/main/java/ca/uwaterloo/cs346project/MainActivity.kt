@@ -2,17 +2,22 @@ package ca.uwaterloo.cs346project
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
 import ca.uwaterloo.cs346project.ui.theme.CS346ProjectTheme
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
@@ -22,7 +27,6 @@ import kotlinx.coroutines.runBlocking
 import java.io.File
 
 var user_id = -1
-
 class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
@@ -50,7 +54,7 @@ class MainActivity : ComponentActivity() {
             val scope = rememberCoroutineScope()
             var undoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf(emptyList())) }
             var redoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf()) }
-
+            var page by remember { mutableStateOf(Pg()) }
             LaunchedEffect(true) {
                 scope.launch {
                     while (true) {
@@ -74,21 +78,27 @@ class MainActivity : ComponentActivity() {
             }
 
             CS346ProjectTheme {
+
                 Box {
                     Row(modifier = Modifier
                         .fillMaxSize()
                         .align(Alignment.TopCenter)
                     ) {
-                        Whiteboard(drawInfo, undoStack, redoStack)
+                        if (page.curPage == CurrentPage.HomePage) {
+                            HomePage(page, setPage = {page = it})
+                        } else if (page.curPage == CurrentPage.WhiteboardPage) {
+                            Whiteboard(drawInfo, undoStack, redoStack)
+                        }
                     }
+                    if (page.curPage == CurrentPage.WhiteboardPage) {
+                        UpperBar(undoStack,redoStack,page, setPage = {page = it})
 
-                    UpperBar(undoStack, redoStack)
-
-                    Row(modifier = Modifier
-                        .fillMaxWidth()
-                        .align(Alignment.BottomCenter)
-                    ) {
-                        Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it })
+                        Row(modifier = Modifier
+                            .fillMaxWidth()
+                            .align(Alignment.BottomCenter)
+                        ) {
+                            Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it })
+                        }
                     }
                 }
             }
