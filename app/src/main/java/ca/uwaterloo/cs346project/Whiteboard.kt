@@ -1,10 +1,12 @@
 package ca.uwaterloo.cs346project
 
+import android.content.Context
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
@@ -31,72 +33,67 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.withTransform
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.launch
 
 
 // Helper function to draw a given DrawnItem
-fun DrawScope.drawItem(item: DrawnItem) {
-    // Ensure there are at least two points to draw a line
-    if (item.segmentPoints.size < 2) return
+fun DrawScope.drawTransformedItem(item: DrawnItem, viewportOffset: Offset) {
+    // Create a new item with translated points
+    val translatedItem = item.copy(
+        segmentPoints = item.segmentPoints.map { point ->
+            Offset(
+                x = point.x - viewportOffset.x,
+                y = point.y - viewportOffset.y
+            )
+        }.toMutableStateList()
+    )
 
-    when (item.shape) {
-        // TEST VERSION (USING POLY LINE) (TO BE REMOVED)
-//        Shape.Line, Shape.StraightLine -> {
-//            // Assuming that for Shape.Line, the segmentPoints list represents a polyline
-//            if (item.segmentPoints.size < 2) return
-//
-//            val path = Path().apply {
-//                moveTo(item.segmentPoints.first().x, item.segmentPoints.first().y)
-//                for (point in item.segmentPoints.drop(1)) {
-//                    lineTo(point.x, point.y)
-//                }
-//            }
-//
-//            drawPath(
-//                    path = path,
-//                    color = item.color,
-//                    style = Stroke(width = item.strokeWidth, cap = StrokeCap.Round)
-//            )
-//        }
+    when (translatedItem.shape) {
         Shape.Line, Shape.StraightLine -> {
-            // Draw a line between each pair of points
-            for (i in 1 until item.segmentPoints.size) {
+            for (i in 1 until translatedItem.segmentPoints.size) {
                 drawLine(
-                        color = item.color,
-                        start = item.segmentPoints[i - 1],
-                        end = item.segmentPoints[i],
-                        strokeWidth = item.strokeWidth,
-                        cap = StrokeCap.Round
+                    color = translatedItem.color,
+                    start = translatedItem.segmentPoints[i - 1],
+                    end = translatedItem.segmentPoints[i],
+                    strokeWidth = translatedItem.strokeWidth,
+                    cap = StrokeCap.Round
                 )
             }
         }
         Shape.Rectangle -> {
-            // Assuming the first two points define the opposite corners of the rectangle
-            val start = item.segmentPoints[0]
-            val end = item.segmentPoints[1]
+            val start = translatedItem.segmentPoints[0]
+            val end = translatedItem.segmentPoints[1]
             drawRect(
-                    color = item.color,
-                    topLeft = start,
-                    size = Size(end.x - start.x, end.y - start.y),
-                    style = Stroke(width = item.strokeWidth)
+                color = translatedItem.color,
+                topLeft = start,
+                size = Size(
+                    width = end.x - start.x,
+                    height = end.y - start.y
+                ),
+                style = Stroke(width = translatedItem.strokeWidth)
             )
         }
         Shape.Oval -> {
-            // Assuming the first two points define the opposite corners of the bounding box for the oval
-            val start = item.segmentPoints[0]
-            val end = item.segmentPoints[1]
+            val start = translatedItem.segmentPoints[0]
+            val end = translatedItem.segmentPoints[1]
             drawOval(
-                    color = item.color,
-                    topLeft = start,
-                    size = Size(end.x - start.x, end.y - start.y),
-                    style = Stroke(width = item.strokeWidth)
+                color = translatedItem.color,
+                topLeft = start,
+                size = Size(
+                    width = end.x - start.x,
+                    height = end.y - start.y
+                ),
+                style = Stroke(width = translatedItem.strokeWidth)
             )
         }
     }
 }
+
 
 
 fun linesIntersect(segment1: Pair<Offset, Offset>, segment2: Pair<Offset, Offset>): Boolean {
@@ -195,9 +192,6 @@ fun checkIntersection(item1: DrawnItem, item2: DrawnItem): Boolean {
 }
 
 
-
-
-
 @Composable
 fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>) {
     val canvasColor = Color.White
@@ -209,16 +203,33 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
     val scope = rememberCoroutineScope()
     var tempOffset by remember { mutableStateOf(Offset(0f,0f)) }
 
+    // Left upper corner offset of the current screen relative to the canvas
+    var viewportOffset by remember { mutableStateOf(Offset(1500f, 1500f)) }
+
+    // Default canvas size (3000px * 3000px)
+    // Note: Emulator screen size is 1080px * 2154px
+    val canvasWidth = 3000f
+    val canvasHeight = 3000f
+
+    fun constrainOffset(offset: Offset): Offset {
+        val x = offset.x.coerceIn(0f, canvasWidth)
+        val y = offset.y.coerceIn(0f, canvasHeight)
+        return Offset(x, y)
+    }
+
+
     Canvas(modifier = Modifier
         .fillMaxSize()
         .background(canvasColor) // Default: White
         .pointerInput(Unit) {
             detectTapGestures(
                 onTap = { point ->
+                    val canvasRelativeOffset = point + viewportOffset // NEW
+
                     if (cachedDrawInfo.drawMode == DrawMode.Selection) {
                         val index = drawnItems.indexOfFirst { item ->
-                            ((item.shape == Shape.Rectangle || item.shape == Shape.Oval) && isPointCloseToRectangle(point, item)) ||
-                                    ((item.shape == Shape.StraightLine && isPointCloseToLine(point, item)))
+                            ((item.shape == Shape.Rectangle || item.shape == Shape.Oval) && isPointCloseToRectangle(canvasRelativeOffset, item)) ||
+                                    ((item.shape == Shape.StraightLine && isPointCloseToLine(canvasRelativeOffset, item)))
                         }
                         selectedItemIndex = index
                     }
@@ -227,7 +238,7 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
                             shape = cachedDrawInfo.shape,
                             color = cachedDrawInfo.color,
                             strokeWidth = cachedDrawInfo.strokeWidth,
-                            segmentPoints = mutableStateListOf(point, point)
+                            segmentPoints = mutableStateListOf(canvasRelativeOffset, canvasRelativeOffset)
                         ))
                         undoStack.add(drawnItems.toList())
                         redoStack.clear()
@@ -290,20 +301,26 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
 
                 onDragStart = { change ->
                     if (cachedDrawInfo.drawMode != DrawMode.Selection && cachedDrawInfo.drawMode != DrawMode.CanvasDrag) {
-                            tempItem = DrawnItem(
-                                shape = cachedDrawInfo.shape,
-//                                color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) canvasColor else cachedDrawInfo.color, // Original
-                                color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) Color.Red else cachedDrawInfo.color, // TESTING (TO BE REMOVED)
-                                strokeWidth = cachedDrawInfo.strokeWidth,
-                                segmentPoints = mutableStateListOf(change, change)
-                            )
-                        tempOffset = change
+                        tempOffset = change + viewportOffset
+                        tempItem = DrawnItem(
+                            shape = cachedDrawInfo.shape,
+//                          color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) canvasColor else cachedDrawInfo.color, // Original
+                            color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) Color.Red else cachedDrawInfo.color, // TESTING (TO BE REMOVED)
+                            strokeWidth = cachedDrawInfo.strokeWidth,
+                            segmentPoints = mutableStateListOf(tempOffset, tempOffset)
+                        )
+
                     }
                 },
 
                 onDrag = { change, amount ->
                     if (cachedDrawInfo.drawMode == DrawMode.CanvasDrag) {
-                        Unit // do something (drag canvas)
+                        val newOffset = constrainOffset((viewportOffset - amount))
+                        if (newOffset != viewportOffset) {
+                            viewportOffset = newOffset
+                        } else {
+                            Log.d("CanvasDrag", "Boundary reached") // DEBUG & TEST PURPOSE (can be removed)
+                        }
                     }
 
                     else if (cachedDrawInfo.drawMode == DrawMode.Selection) {
@@ -318,7 +335,7 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
                     }
 
                     else {
-                        tempOffset = change.position
+                        tempOffset = change.position + viewportOffset
 
                         if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Eraser) {
                             change.consume()
@@ -338,11 +355,11 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
         }
     ) {
         drawnItems.forEach { item ->
-            drawItem(item)
+            drawTransformedItem(item, viewportOffset)
         }
 
         tempItem?.let {
-            drawItem(it)
+            drawTransformedItem(it, viewportOffset)
         }
 
         if (cachedDrawInfo.drawMode == DrawMode.Selection && selectedItemIndex != -1) {
@@ -351,28 +368,29 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
                 if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
                     val cornerSize = 40f
                     // Assuming the first and last points are the corners of the rectangle/oval
-                    val start = item.segmentPoints.first()
-                    val end = item.segmentPoints.last()
+                    val start = item.segmentPoints.first() - viewportOffset
+                    val end = item.segmentPoints.last() - viewportOffset
                     val corners = listOf(
-                            start,
-                            Offset(end.x, start.y),
-                            Offset(start.x, end.y),
-                            end
+                        start,
+                        Offset(end.x, start.y),
+                        Offset(start.x, end.y),
+                        end
                     )
+
                     corners.forEach { corner ->
                         drawRect(
-                                color = Color.Red,
-                                topLeft = Offset(corner.x - cornerSize / 2, corner.y - cornerSize / 2),
-                                size = Size(cornerSize, cornerSize),
-                                style = Stroke(width = 5f)
+                            color = Color.Red,
+                            topLeft = Offset(corner.x - cornerSize / 2, corner.y - cornerSize / 2),
+                            size = Size(cornerSize, cornerSize),
+                            style = Stroke(width = 5f)
                         )
                     }
                     if (item.shape == Shape.Oval) {
                         drawRect(
-                                color = Color.Red,
-                                topLeft = start,
-                                size = Size(end.x - start.x, end.y - start.y),
-                                style = Stroke(width = 3f)
+                            color = Color.Red,
+                            topLeft = start,
+                            size = Size(end.x - start.x, end.y - start.y),
+                            style = Stroke(width = 3f)
                         )
                     }
                 } else if (item.shape == Shape.StraightLine) {
@@ -381,10 +399,10 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
                     // Draw circles at each segment point
                     item.segmentPoints.forEach { point ->
                         drawCircle(
-                                color = circleColor,
-                                center = point,
-                                radius = radius,
-                                style = Stroke(width = 5f)
+                            color = circleColor,
+                            center = point - viewportOffset,
+                            radius = radius,
+                            style = Stroke(width = 5f)
                         )
                     }
                 }
@@ -392,6 +410,5 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
                 selectedItemIndex = -1
             }
         }
-
     }
 }
