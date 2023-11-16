@@ -147,6 +147,7 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
                     setDrawInfo(drawInfo.copy(drawMode = DrawMode.CanvasDrag, shape = Shape.Line))
                 } else {
                     setDrawInfo(drawInfo.copy(drawMode = DrawMode.Eraser, shape = Shape.Line))
+                    toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
                 }
             }
 
