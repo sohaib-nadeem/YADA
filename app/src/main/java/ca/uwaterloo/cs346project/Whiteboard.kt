@@ -199,7 +199,8 @@ fun checkIntersection(item1: DrawnItem, item2: DrawnItem): Boolean {
 
 
 @Composable
-fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>) {
+fun Whiteboard(drawInfo: DrawInfo, drawnItems: SnapshotStateList<DrawnItem>, undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>) {
+    // Stores all the drawn items (lines, straight lines, rectangles, ovals, erasing lines)
     val canvasColor = Color.White
     var cachedDrawInfo by remember { mutableStateOf(DrawInfo()) }
     cachedDrawInfo = drawInfo
@@ -229,6 +230,9 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
                             strokeWidth = cachedDrawInfo.strokeWidth,
                             segmentPoints = mutableStateListOf(point, point)
                         ))
+                        scope.launch {
+                            client.send(drawnItems.last())
+                        }
                         undoStack.add(drawnItems.toList())
                         redoStack.clear()
                     }
@@ -275,11 +279,9 @@ fun Whiteboard(drawInfo: DrawInfo, undoStack: MutableList<List<DrawnItem>>, redo
                                 drawnItems.add(tempItem!!)
                                 tempItem = null
 
-                                // Silenced the server sync, testing prototype
-//                                scope.launch {
-//                                    //Client().send(user_id, drawnItems.last())
-//                                    Client().fakeSend(user_id, drawnItems.last())
-//                                }
+                                scope.launch {
+                                  client.send(drawnItems.last())
+                                }
                             }
                         }
 

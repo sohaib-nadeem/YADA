@@ -5,22 +5,29 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import java.io.File
 
 @Composable
 fun UpperBarIconButton(icon: ImageVector, color: Color, onClick: () -> Unit) {
@@ -36,14 +43,15 @@ fun UpperBarIconButton(icon: ImageVector, color: Color, onClick: () -> Unit) {
 }
 
 @Composable
-fun UpperBar(undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>, page: Pg, setPage: (Pg) -> Unit) {
+fun UpperBar(drawnItems: SnapshotStateList<DrawnItem>, undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>, page: Pg, setPage: (Pg) -> Unit) {
     Row(horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.Top,
         modifier = Modifier
             .padding(8.dp)
             .fillMaxWidth()
     ){
-        Box(modifier = Modifier.weight(1f)){
+        val context = LocalContext.current
+        Box(modifier = Modifier.weight(3f)){
             Row(
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.Top,
@@ -52,11 +60,18 @@ fun UpperBar(undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<Lis
                     .fillMaxWidth()
             ) {
                 UpperBarIconButton(icon = ImageVector.vectorResource(id = R.drawable.arrow_back_24px), color = Color.LightGray) {
+                    val sessionIdFile = File(context.filesDir, "session_id.txt")
+                    sessionIdFile.writeText(client.session_id.toString())
                     setPage(page.copy(curPage = CurrentPage.HomePage))
                 }
+                Button(onClick = {}) {
+                    Text("Session ID: ${client.session_id.toString()}")
+                }
+
             }
         }
-        Box(modifier = Modifier.weight(1f)) {
+
+        Box(modifier = Modifier.weight(2f)) {
             Row(
                 horizontalArrangement = Arrangement.End,
                 verticalAlignment = Alignment.Top,

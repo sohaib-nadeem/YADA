@@ -1,5 +1,11 @@
 package ca.uwaterloo.cs346project
+import android.graphics.Canvas
+import androidx.compose.foundation.Canvas
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.snapshots.SnapshotStateList
+import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.client.statement.*
@@ -21,18 +27,34 @@ import kotlinx.serialization.json.*
 @Serializable
 data class CanvasObject(
     val shape: Shape = Shape.Line,
-    //val color: Color = Color.Black,
+    val color: ULong = 0UL,
     val strokeWidth: Float = 4f,
-    var start: ca.uwaterloo.cs346project.Offset = ca.uwaterloo.cs346project.Offset(0f, 0f),
-    var end: ca.uwaterloo.cs346project.Offset = ca.uwaterloo.cs346project.Offset(0f, 0f)
-)
+    val segmentPoints : List<Offset> = listOf()
+) {
+    @Serializable
+    data class Offset (val x: Float, val y: Float)
 
-@Serializable
-data class Offset (val x: Float, val y: Float)
+}
+fun toCanvasObject(item: DrawnItem): CanvasObject {
+    return CanvasObject(item.shape,item.color.value,item.strokeWidth, segmentPoints = item.segmentPoints.toList().map{
+        CanvasObject.Offset(it.x, it.y)
+    })
+}
+
+fun toDrawnItem(canvasobject: CanvasObject): DrawnItem {
+
+    return DrawnItem(canvasobject.shape,
+        Color(canvasobject.color),
+        canvasobject.strokeWidth,
+        canvasobject.segmentPoints.map {
+            Offset(it.x,it.y)
+        }.toMutableStateList())
+}
 
 class Client {
-    val server_ip = "169.254.22.221"
-
+    val server_ip = "172.20.10.2"
+    var session_id = -1
+    var user_id = -1
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(Json {
@@ -42,29 +64,40 @@ class Client {
         }
     }
 
-    suspend fun join(): Int {
-        var user_id = 0
+    // request server to create new session
+    // returns session id
+    suspend fun create(): Boolean {
+        var session_user = Pair(0, 0)
         try {
-            user_id = client.get("http://$server_ip:8080/join/0").body()
-            println("success joining")
+            session_user = client.get("http://$server_ip:8080/create").body()
+            println("success creating")
         } catch (e: Exception) {
             println(e.localizedMessage)
+            return false
         }
-        return user_id
+        session_id = session_user.first
+        user_id = session_user.second
+        return true
+    }
+    suspend fun join(session_id: String): Boolean {
+        var user_id = 0
+        try {
+            user_id = client.get("http://$server_ip:8080/join/${session_id.toInt()}").body()
+            println("success joining")
+            this.session_id = session_id.toInt()
+            this.user_id = user_id
+        } catch (e: Exception) {
+            println(e.localizedMessage)
+            return false
+        }
+        return true
     }
 
-    suspend fun send(user_id:Int, item:DrawnItem) {
-        // convert DrawnItem to CanvasObject
-//        val itemToSend = CanvasObject(item.shape,item.strokeWidth,
-//            ca.uwaterloo.cs346project.Offset(item.start.x, item.start.y),
-//            ca.uwaterloo.cs346project.Offset(item.end.x, item.end.y))
-
-        val itemToSend = CanvasObject(item.shape,item.strokeWidth,
-            ca.uwaterloo.cs346project.Offset(item.segmentPoints.first().x, item.segmentPoints.first().y),
-            ca.uwaterloo.cs346project.Offset(item.segmentPoints.last().x, item.segmentPoints.last().y))
+    suspend fun send(item:DrawnItem) {
+        val itemToSend = toCanvasObject(item)
         println(item)
         try {
-            val response = client.post("http://$server_ip:8080/send/$user_id") {
+            val response = client.post("http://$server_ip:8080/send/$session_id/$user_id") {
                 contentType(ContentType.Application.Json)
                 setBody(itemToSend)
             }
@@ -73,14 +106,14 @@ class Client {
         }
     }
 
-    suspend fun receive(user_id:Int): List<CanvasObject> {
+    suspend fun receive(): List<DrawnItem> {
         var items = listOf<CanvasObject>()
         try {
-           items = client.get("http://$server_ip:8080/receive/$user_id").body()
+           items = client.get("http://$server_ip:8080/receive/$session_id/$user_id").body()
         } catch (e: Exception) {
-            //println(e.localizedMessage)
+            println(e.localizedMessage)
         }
-        return items
+        return items.map({toDrawnItem(it)})
     }
 
 

@@ -27,79 +27,48 @@ import kotlinx.coroutines.runBlocking
 import java.io.File
 
 var user_id = -1
+val client = Client()
 class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
-        val json = Gson().toJson(drawnItems)
-        val file = File(filesDir, "drawnItems.json")
-        file.writeText(json)
+        //val json = Gson().toJson(drawnItems)
+        //val file = File(filesDir, "drawnItems.json")
+        //file.writeText(json)
+    }
+    override fun onDestroy() {
+        super.onDestroy()
+        val sessionIdFile = File(filesDir, "session_id.txt")
+        sessionIdFile.writeText(client.session_id.toString())
     }
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val drawnItemsDataFile = File(filesDir, "drawnItemsData.json")
+        val sessionIdFile = File(filesDir, "session_id.txt")
 
         if (drawnItemsDataFile.exists()) {
             val json = drawnItemsDataFile.readText()
             val type = object : TypeToken<List<DrawnItem>>() {}.type
-            drawnItems = Gson().fromJson(json, type)
+            //drawnItems = Gson().fromJson(json, type)
+        }
+
+        if (sessionIdFile.exists()) {
+            val text = sessionIdFile.readText()
+            client.session_id = text.toInt()
         }
 
         runBlocking {
             //user_id = Client().join()
-            user_id = Client().fakeJoin()
+            user_id = client.fakeJoin()
         }
 
         setContent {
-            var drawInfo by remember { mutableStateOf(DrawInfo()) }
-            val scope = rememberCoroutineScope()
-            var undoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf(emptyList())) }
-            var redoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf()) }
             var page by remember { mutableStateOf(Pg()) }
-            LaunchedEffect(true) {
-                scope.launch {
-                    while (true) {
-                        //val item = Client().receive(user_id)
-                        val item = Client().fakeReceive(user_id)
-                        /*
-                        for (i in item) {
-                            val drawing = DrawnItem(
-                                i.shape,
-                                Color.Black,
-                                i.strokeWidth,
-                                mutableStateListOf()
-                            )
-                            drawnItems.add(drawing)
-                        }
-                        */
-                        //drawnItems.addAll(items)
-                        delay(100L)
-                    }
-                }
-            }
 
             CS346ProjectTheme {
-
-                Box {
-                    Row(modifier = Modifier
-                        .fillMaxSize()
-                        .align(Alignment.TopCenter)
-                    ) {
-                        if (page.curPage == CurrentPage.HomePage) {
-                            HomePage(page, setPage = {page = it})
-                        } else if (page.curPage == CurrentPage.WhiteboardPage) {
-                            Whiteboard(drawInfo, undoStack, redoStack)
-                        }
-                    }
-                    if (page.curPage == CurrentPage.WhiteboardPage) {
-                        UpperBar(undoStack,redoStack,page, setPage = {page = it})
-
-                        Row(modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
-                        ) {
-                            Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it })
-                        }
-                    }
+                if (page.curPage == CurrentPage.HomePage) {
+                    HomePage(page, setPage = {page = it})
+                } else if (page.curPage == CurrentPage.WhiteboardPage) {
+                    WhiteboardScreen(page, setPage = {page = it})
                 }
             }
         }

@@ -1,6 +1,8 @@
 package ca.uwaterloo.cs346project
 
+import android.content.Context
 import android.content.res.Configuration
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,15 +32,20 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import kotlinx.coroutines.runBlocking
 
+fun makeToast(context: Context, text: String){
+    Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+}
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
-    var showSessionIDBox by remember { mutableStateOf(false)}
+    var joinSessionID by remember { mutableStateOf("") }
+    val context = LocalContext.current
     BoxWithConstraints {
-        if (maxWidth < maxHeight) {
             // "Portrait"
             Box(modifier = Modifier
                 .fillMaxSize()
@@ -50,86 +57,62 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                         Text(text = "Whiteboard", fontSize = 50.sp)
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
+                        OutlinedButton(onClick = { runBlocking {
+                            if (client.create()) {
+                                setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                            } else {
+                                val text = "Failed to create"
+                                makeToast(context,text)
+                            } }
+                            },
                             modifier = Modifier
-                                .width(300.dp)
-                                .height(80.dp)) {
-                            Text("New Canvas", fontSize=25.sp)
+                                .width(200.dp)
+                                .height(40.dp)) {
+                            Text("New Canvas", fontSize=20.sp)
                         }
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        Button(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
+                        Button(onClick = { runBlocking {
+                                if (client.join(client.session_id.toString())) {
+                                    setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                                } else {
+                                    val text = "Failed to open previous canvas"
+                                    makeToast(context,text)
+                                }
+                            }},
                             modifier = Modifier
-                                .width(300.dp)
-                                .height(80.dp)) {
-                            Text("Open Previous", fontSize=25.sp)
+                                .width(200.dp)
+                                .height(40.dp)) {
+                            Text("Open Previous", fontSize=20.sp)
                         }
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { showSessionIDBox = !showSessionIDBox},
+                        OutlinedButton(onClick =
+                            {
+                                runBlocking {
+                                    if (client.join(joinSessionID)) {
+                                        setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                                    } else {
+                                        val text = "invalid Session ID"
+                                        makeToast(context,text)
+                                    }
+                                }
+                            },
                             modifier = Modifier
-                                .width(300.dp)
-                                .height(80.dp)) {
-                            Text("Join Session", fontSize=25.sp)
+                                .width(200.dp)
+                                .height(40.dp)) {
+                            Text("Join Session", fontSize=20.sp)
                         }
                     }
-                    var text by remember { mutableStateOf("") }
                     Box(modifier = Modifier.weight(1f)) {
-                        if (showSessionIDBox) {
                             TextField(
-                                value = text,
-                                onValueChange = { text = it },
+                                modifier = Modifier.width(200.dp),
+                                value = joinSessionID,
+                                onValueChange = { joinSessionID = it },
                                 label = { Text("Session ID") }
                             )
-                        }
                     }
                 }
             }
-        } else {
-            // "Landscape"
-            Row(modifier = Modifier.fillMaxSize(),
-                horizontalArrangement = Arrangement.SpaceEvenly,
-                verticalAlignment = Alignment.CenterVertically) {
-                    Column(modifier = Modifier.weight(1f).fillMaxSize(),
-                        horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(text = "Whiteboard", fontSize = 50.sp, modifier = Modifier.offset(y=(100).dp))
-                        if (showSessionIDBox) {
-                            var text by remember { mutableStateOf("") }
-                            TextField(
-                                value = text,
-                                onValueChange = { text = it },
-                                label = { Text("Session ID")},
-                                modifier = Modifier.offset(y=130.dp)
-                            )
-                        }
-                    }
-
-
-                Box(modifier = Modifier.weight(1f)) {
-                    Column(modifier = Modifier.fillMaxSize(),
-                        verticalArrangement = Arrangement.SpaceEvenly,
-                        horizontalAlignment = Alignment.CenterHorizontally) {
-                        OutlinedButton(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
-                            modifier = Modifier
-                                .width(300.dp)
-                                .height(80.dp)) {
-                            Text("New Canvas", fontSize=25.sp)
-                        }
-                        Button(onClick = { setPage(page.copy(curPage = CurrentPage.WhiteboardPage)) },
-                            modifier = Modifier
-                                .width(300.dp)
-                                .height(80.dp)) {
-                            Text("Open Previous", fontSize=25.sp)
-                        }
-                        OutlinedButton(onClick = { showSessionIDBox = !showSessionIDBox},
-                            modifier = Modifier
-                                .width(300.dp)
-                                .height(80.dp)) {
-                            Text("Join Session", fontSize=25.sp)
-                        }
-                    }
-                }
-            }
-        }
     }
 }
