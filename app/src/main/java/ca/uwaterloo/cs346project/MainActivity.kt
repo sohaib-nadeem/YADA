@@ -1,27 +1,23 @@
 package ca.uwaterloo.cs346project
 import android.os.Bundle
-import android.util.Log
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.Text
-import androidx.compose.runtime.*
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import ca.uwaterloo.cs346project.ui.theme.CS346ProjectTheme
 import com.google.gson.Gson
 import com.google.gson.reflect.TypeToken
+import dev.shreyaspatil.capturable.controller.rememberCaptureController
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -51,6 +47,7 @@ class MainActivity : ComponentActivity() {
         }
 
         setContent {
+            val capturableController = rememberCaptureController()
             var drawInfo by remember { mutableStateOf(DrawInfo()) }
             val scope = rememberCoroutineScope()
             var undoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf(emptyList())) }
@@ -88,11 +85,11 @@ class MainActivity : ComponentActivity() {
                         if (page.curPage == CurrentPage.HomePage) {
                             HomePage(page, setPage = {page = it})
                         } else if (page.curPage == CurrentPage.WhiteboardPage) {
-                            Whiteboard(drawInfo, undoStack, redoStack)
+                            Whiteboard(drawInfo, undoStack, redoStack, capturableController)
                         }
                     }
                     if (page.curPage == CurrentPage.WhiteboardPage) {
-                        UpperBar(undoStack,redoStack,page, setPage = {page = it})
+                        UpperBar(undoStack, redoStack, page, setPage = {page = it}, capturableController)
 
                         Row(modifier = Modifier
                             .fillMaxWidth()
