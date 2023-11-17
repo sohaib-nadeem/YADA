@@ -1,13 +1,13 @@
 package ca.uwaterloo.cs346project
+import android.content.res.Resources
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.getValue
+import androidx.compose.runtime.*
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -50,9 +50,16 @@ class MainActivity : ComponentActivity() {
             val capturableController = rememberCaptureController()
             var drawInfo by remember { mutableStateOf(DrawInfo()) }
             val scope = rememberCoroutineScope()
-            var undoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf(emptyList())) }
-            var redoStack by remember { mutableStateOf<MutableList<List<DrawnItem>>>(mutableListOf()) }
+
+            val undoStack: MutableList<Action> = mutableListOf()
+            val redoStack: MutableList<Action> = mutableListOf()
             var page by remember { mutableStateOf(Pg()) }
+
+            val metrics = Resources.getSystem().displayMetrics
+            val screenWidth = metrics.widthPixels.toFloat()
+            val screenHeight = metrics.heightPixels.toFloat()
+
+
             LaunchedEffect(true) {
                 scope.launch {
                     while (true) {
@@ -76,7 +83,6 @@ class MainActivity : ComponentActivity() {
             }
 
             CS346ProjectTheme {
-
                 Box {
                     Row(modifier = Modifier
                         .fillMaxSize()
@@ -85,15 +91,24 @@ class MainActivity : ComponentActivity() {
                         if (page.curPage == CurrentPage.HomePage) {
                             HomePage(page, setPage = {page = it})
                         } else if (page.curPage == CurrentPage.WhiteboardPage) {
-                            Whiteboard(drawInfo, undoStack, redoStack, capturableController)
+                            Whiteboard(drawInfo, undoStack, redoStack, capturableController, screenWidth, screenHeight)
                         }
                     }
-                    if (page.curPage == CurrentPage.WhiteboardPage) {
-                        UpperBar(undoStack, redoStack, page, setPage = {page = it}, capturableController)
 
-                        Row(modifier = Modifier
-                            .fillMaxWidth()
-                            .align(Alignment.BottomCenter)
+                    if (page.curPage == CurrentPage.WhiteboardPage) {
+                        UpperBar(
+                            drawnItems,
+                            undoStack,
+                            redoStack,
+                            page,
+                            setPage = { page = it },
+                            capturableController
+                        )
+
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .align(Alignment.BottomCenter)
                         ) {
                             Toolbar(drawInfo = drawInfo, setDrawInfo = { drawInfo = it })
                         }

@@ -14,8 +14,31 @@ data class DrawnItem(
     var color: Color = Color.Black,
     val strokeWidth: Float = 4f,
 //    val segmentPoints : SnapshotStateList<Pair<Offset, Offset>> = mutableStateListOf()
-    val segmentPoints : SnapshotStateList<Offset> = mutableStateListOf()
-)
+    val segmentPoints: SnapshotStateList<Offset> = mutableStateListOf()
+) {
+    override fun equals(other: Any?): Boolean {
+        if (this === other) return true
+        if (javaClass != other?.javaClass) return false
+
+        other as DrawnItem
+
+        if (shape != other.shape) return false
+        if (color != other.color) return false
+        if (strokeWidth != other.strokeWidth) return false
+        if (segmentPoints.size != other.segmentPoints.size) return false
+        if (!segmentPoints.containsAll(other.segmentPoints)) return false
+
+        return true
+    }
+
+    override fun hashCode(): Int {
+        var result = shape.hashCode()
+        result = 31 * result + color.hashCode()
+        result = 31 * result + strokeWidth.hashCode()
+        result = 31 * result + segmentPoints.hashCode()
+        return result
+    }
+}
 
 
 // Contains attributes for pen and eraser as well as the drawing mode
@@ -25,6 +48,21 @@ data class DrawInfo (
     val color: Color = Color.Black,
     val strokeWidth: Float = 4f,
 )
+
+
+data class Action(
+    val type: ActionType,
+    val items: List<DrawnItem>, // The items involved in the action
+    val additionalInfo: Any? = null // Optional field for any extra information needed
+)
+
+
+enum class ActionType {
+    ADD, // When a new item is added
+    REMOVE, // When an item is removed (e.g., erasing)
+    MODIFY // When an item is modified (e.g., moved or resized)
+}
+
 
 const val MAX_STROKE_WIDTH = 140f
 
