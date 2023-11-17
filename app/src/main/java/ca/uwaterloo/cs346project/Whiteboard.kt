@@ -1,5 +1,8 @@
 package ca.uwaterloo.cs346project
 
+import android.graphics.Canvas
+import android.graphics.pdf.PdfDocument
+import android.os.Environment
 import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -29,72 +32,72 @@ import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.res.painterResource
-import androidx.compose.ui.unit.dp
+import dev.shreyaspatil.capturable.Capturable
+import dev.shreyaspatil.capturable.controller.CaptureController
 import kotlinx.coroutines.launch
+import java.io.File
+import java.io.FileOutputStream
+import java.io.IOException
+import java.lang.Float.max
+import java.text.SimpleDateFormat
+import java.util.Date
 
 
 // Helper function to draw a given DrawnItem
-fun DrawScope.drawItem(item: DrawnItem) {
-    // Ensure there are at least two points to draw a line
-    if (item.segmentPoints.size < 2) return
+fun DrawScope.drawTransformedItem(item: DrawnItem, viewportOffset: Offset) {
+    // Create a new item with translated points
+    val translatedItem = item.copy(
+        segmentPoints = item.segmentPoints.map { point ->
+            Offset(
+                x = point.x - viewportOffset.x,
+                y = point.y - viewportOffset.y
+            )
+        }.toMutableStateList()
+    )
 
-    when (item.shape) {
-        // TEST VERSION (USING POLY LINE) (TO BE REMOVED)
-//        Shape.Line, Shape.StraightLine -> {
-//            // Assuming that for Shape.Line, the segmentPoints list represents a polyline
-//            if (item.segmentPoints.size < 2) return
-//
-//            val path = Path().apply {
-//                moveTo(item.segmentPoints.first().x, item.segmentPoints.first().y)
-//                for (point in item.segmentPoints.drop(1)) {
-//                    lineTo(point.x, point.y)
-//                }
-//            }
-//
-//            drawPath(
-//                    path = path,
-//                    color = item.color,
-//                    style = Stroke(width = item.strokeWidth, cap = StrokeCap.Round)
-//            )
-//        }
+    when (translatedItem.shape) {
         Shape.Line, Shape.StraightLine -> {
-            // Draw a line between each pair of points
-            for (i in 1 until item.segmentPoints.size) {
+            for (i in 1 until translatedItem.segmentPoints.size) {
                 drawLine(
-                        color = item.color,
-                        start = item.segmentPoints[i - 1],
-                        end = item.segmentPoints[i],
-                        strokeWidth = item.strokeWidth,
-                        cap = StrokeCap.Round
+                    color = translatedItem.color,
+                    start = translatedItem.segmentPoints[i - 1],
+                    end = translatedItem.segmentPoints[i],
+                    strokeWidth = translatedItem.strokeWidth,
+                    cap = StrokeCap.Round
                 )
             }
         }
         Shape.Rectangle -> {
-            // Assuming the first two points define the opposite corners of the rectangle
-            val start = item.segmentPoints[0]
-            val end = item.segmentPoints[1]
+            val start = translatedItem.segmentPoints[0]
+            val end = translatedItem.segmentPoints[1]
             drawRect(
-                    color = item.color,
-                    topLeft = start,
-                    size = Size(end.x - start.x, end.y - start.y),
-                    style = Stroke(width = item.strokeWidth)
+                color = translatedItem.color,
+                topLeft = start,
+                size = Size(
+                    width = end.x - start.x,
+                    height = end.y - start.y
+                ),
+                style = Stroke(width = translatedItem.strokeWidth)
             )
         }
         Shape.Oval -> {
-            // Assuming the first two points define the opposite corners of the bounding box for the oval
-            val start = item.segmentPoints[0]
-            val end = item.segmentPoints[1]
+            val start = translatedItem.segmentPoints[0]
+            val end = translatedItem.segmentPoints[1]
             drawOval(
-                    color = item.color,
-                    topLeft = start,
-                    size = Size(end.x - start.x, end.y - start.y),
-                    style = Stroke(width = item.strokeWidth)
+                color = translatedItem.color,
+                topLeft = start,
+                size = Size(
+                    width = end.x - start.x,
+                    height = end.y - start.y
+                ),
+                style = Stroke(width = translatedItem.strokeWidth)
             )
         }
+        // Add other shapes as needed
     }
 }
 
@@ -144,63 +147,52 @@ fun linesIntersect(segment1: Pair<Offset, Offset>, segment2: Pair<Offset, Offset
 }
 
 
-fun checkIntersection(item1: DrawnItem, item2: DrawnItem): Boolean {
-    // Check if item1 is a line
-    if (item1.shape != Shape.Line) return false
-
+fun checkIntersection(line: Pair<Offset, Offset>, item: DrawnItem): Boolean {
     // If item2 is a line or straight line, check intersection between each pair of consecutive points
-    if (item2.shape == Shape.Line || item2.shape == Shape.StraightLine) {
-        for (i in 1 until item1.segmentPoints.size) {
-            for (j in 1 until item2.segmentPoints.size) {
-                if (linesIntersect(
-                                Pair(item1.segmentPoints[i - 1], item1.segmentPoints[i]),
-                                Pair(item2.segmentPoints[j - 1], item2.segmentPoints[j])
-                        )
-                ) {
-                    Log.d("Intersection", "Intersection detected between lines.")
-                    return true
-                }
+    if (item.shape == Shape.Line || item.shape == Shape.StraightLine) {
+        for (i in 1 until item.segmentPoints.size) {
+            if (linesIntersect(line, Pair(item.segmentPoints[i - 1], item.segmentPoints[i]))) {
+                Log.d("Intersection", "Intersection detected between lines.")
+                return true
             }
         }
     }
-    // If item2 is a rectangle, calculate its edges and check intersection
-    else if (item2.shape == Shape.Rectangle || item2.shape == Shape.Oval) {
-        val topLeft = item2.segmentPoints[0]
-        val bottomRight = item2.segmentPoints[1]
+    // If item is a rectangle, calculate its edges and check intersection
+    else if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
+        val topLeft = item.segmentPoints[0]
+        val bottomRight = item.segmentPoints[1]
         val topRight = Offset(bottomRight.x, topLeft.y)
         val bottomLeft = Offset(topLeft.x, bottomRight.y)
 
         val rectangleEdges = listOf(
-                Pair(topLeft, topRight),
-                Pair(topRight, bottomRight),
-                Pair(bottomRight, bottomLeft),
-                Pair(bottomLeft, topLeft)
+            Pair(topLeft, topRight),
+            Pair(topRight, bottomRight),
+            Pair(bottomRight, bottomLeft),
+            Pair(bottomLeft, topLeft)
         )
 
-        for (i in 1 until item1.segmentPoints.size) {
-            rectangleEdges.forEach { edge ->
-                if (linesIntersect(
-                                Pair(item1.segmentPoints[i - 1], item1.segmentPoints[i]),
-                                edge
-                        )
-                ) {
-                    Log.d("Intersection", "Intersection detected between line and rectangle.")
-                    return true
-                }
+        rectangleEdges.forEach { edge ->
+            if (linesIntersect(line, edge)) {
+                Log.d("Intersection", "Intersection detected between line and rectangle.")
+                return true
             }
         }
     }
-
     return false
 }
 
 
 
-
-
 @Composable
-fun Whiteboard(drawInfo: DrawInfo, drawnItems: SnapshotStateList<DrawnItem>, undoStack: MutableList<List<DrawnItem>>, redoStack: MutableList<List<DrawnItem>>) {
-    // Stores all the drawn items (lines, straight lines, rectangles, ovals, erasing lines)
+fun Whiteboard(
+    drawInfo: DrawInfo,
+    drawnItems: SnapshotStateList<DrawnItem>,
+    undoStack: MutableList<Action>,
+    redoStack: MutableList<Action>,
+    captureController: CaptureController,
+    screenWidth: Float,
+    screenHeight: Float
+){
     val canvasColor = Color.White
     var cachedDrawInfo by remember { mutableStateOf(DrawInfo()) }
     cachedDrawInfo = drawInfo
@@ -209,191 +201,315 @@ fun Whiteboard(drawInfo: DrawInfo, drawnItems: SnapshotStateList<DrawnItem>, und
     var selectedItemIndex by remember { mutableStateOf(-1) }
     val scope = rememberCoroutineScope()
     var tempOffset by remember { mutableStateOf(Offset(0f,0f)) }
+    var tempAction by remember { mutableStateOf<Action?>(null) }
 
-    Canvas(modifier = Modifier
-        .fillMaxSize()
-        .background(canvasColor) // Default: White
-        .pointerInput(Unit) {
-            detectTapGestures(
-                onTap = { point ->
-                    if (cachedDrawInfo.drawMode == DrawMode.Selection) {
-                        val index = drawnItems.indexOfFirst { item ->
-                            ((item.shape == Shape.Rectangle || item.shape == Shape.Oval) && isPointCloseToRectangle(point, item)) ||
-                                    ((item.shape == Shape.StraightLine && isPointCloseToLine(point, item)))
-                        }
-                        selectedItemIndex = index
-                    }
-                    else if (cachedDrawInfo.drawMode == DrawMode.Pen) {
-                        drawnItems.add(DrawnItem(
-                            shape = cachedDrawInfo.shape,
-                            color = cachedDrawInfo.color,
-                            strokeWidth = cachedDrawInfo.strokeWidth,
-                            segmentPoints = mutableStateListOf(point, point)
-                        ))
-                        scope.launch {
-                            client.send(drawnItems.last())
-                        }
-                        undoStack.add(drawnItems.toList())
-                        redoStack.clear()
-                    }
+    // Left upper corner offset of the current screen relative to the canvas
+    var viewportOffset by remember { mutableStateOf(Offset.Zero) }
+
+    // Default canvas size (3000px * 3000px)
+    // Note: Emulator screen size is 1080px * 2154px
+    val canvasWidth = 3000f
+    val canvasHeight = 6000f
+
+    val maxViewportOffset = Offset(max(canvasWidth - screenWidth, 0f), max(canvasHeight - screenHeight, 0f))
+
+    fun constrainOffset(offset: Offset): Offset {
+        val x = offset.x.coerceIn(0f, maxViewportOffset.x)
+        val y = offset.y.coerceIn(0f, maxViewportOffset.y)
+        return Offset(x, y)
+    }
+
+    fun eraseIntersectingItems() {
+        val erasedItems = mutableListOf<DrawnItem>()
+        val remainingItems = mutableListOf<DrawnItem>()
+
+        if (tempItem != null && tempItem!!.segmentPoints.size >= 2) {
+            drawnItems.forEach { item ->
+                if (checkIntersection(Pair(tempItem!!.segmentPoints[tempItem!!.segmentPoints.size - 2], tempItem!!.segmentPoints.last()), item)) {
+                    erasedItems.add(item)
+                } else {
+                    remainingItems.add(item)
                 }
-            )
+            }
+            drawnItems.clear()
+            drawnItems.addAll(remainingItems)
         }
 
-        .pointerInput(Unit) {
-            detectDragGestures(
-                onDragEnd = {
-                    when (cachedDrawInfo.drawMode) {
-                        DrawMode.Selection -> {
-                            Unit
-                        }
-
-                        DrawMode.CanvasDrag -> {
-                            Unit // TO BE IMPLEMENTED (Drag canvas)
-                        }
-
-                        DrawMode.Eraser -> {
-                            if (tempItem != null) {
-                                val erasedItems = mutableListOf<DrawnItem>()
-                                val remainingItems = mutableListOf<DrawnItem>()
-
-                                drawnItems.forEach { item ->
-                                    if (checkIntersection(tempItem!!, item)) {
-                                        erasedItems.add(item)
-                                    } else {
-                                        remainingItems.add(item)
-                                    }
-                                }
-
-                                drawnItems.clear()
-                                drawnItems.addAll(remainingItems)
-
-                                tempItem = null
-
-                                // Need to somehow find a way to send the "remove" action to server
-                            }
-                        }
-
-                        else -> {
-                            if (tempItem != null) {
-                                drawnItems.add(tempItem!!)
-                                tempItem = null
-
-                                scope.launch {
-                                  client.send(drawnItems.last())
-                                }
-                            }
-                        }
-
-                    }
-                    undoStack.add(drawnItems.toList())
-                    redoStack.clear()
-                },
-
-                onDragStart = { change ->
-                    if (cachedDrawInfo.drawMode != DrawMode.Selection && cachedDrawInfo.drawMode != DrawMode.CanvasDrag) {
-                            tempItem = DrawnItem(
-                                shape = cachedDrawInfo.shape,
-//                                color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) canvasColor else cachedDrawInfo.color, // Original
-                                color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) Color.Red else cachedDrawInfo.color, // TESTING (TO BE REMOVED)
-                                strokeWidth = cachedDrawInfo.strokeWidth,
-                                segmentPoints = mutableStateListOf(change, change)
-                            )
-                        tempOffset = change
-                    }
-                },
-
-                onDrag = { change, amount ->
-                    if (cachedDrawInfo.drawMode == DrawMode.CanvasDrag) {
-                        Unit // do something (drag canvas)
-                    }
-
-                    else if (cachedDrawInfo.drawMode == DrawMode.Selection) {
-                        if (selectedItemIndex != -1) {
-                            val item = drawnItems[selectedItemIndex]
-                            val updatedSegmentPoints = item.segmentPoints.map { offset ->
-                                Offset(offset.x + amount.x, offset.y + amount.y)
-                            }.toMutableStateList()
-                            val updatedItem = item.copy(segmentPoints = updatedSegmentPoints)
-                            drawnItems[selectedItemIndex] = updatedItem
-                        }
-                    }
-
-                    else {
-                        tempOffset = change.position
-
-                        if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Eraser) {
-                            change.consume()
-                            if (tempItem != null) {
-                                tempItem!!.segmentPoints.add(tempOffset)
-                            }
-                        }
-
-                        else if (cachedDrawInfo.drawMode == DrawMode.Shape) {
-                            if (tempItem != null && tempItem!!.segmentPoints.size == 2) {
-                                tempItem!!.segmentPoints[1] = tempOffset
-                            }
-                        }
-                    }
-                }
+        if (erasedItems.isNotEmpty()) {
+            if (tempAction == null) {
+                tempAction = Action(
+                    type =  ActionType.REMOVE,
+                    items = emptyList()
+                )
+            }
+            tempAction = tempAction!!.copy(
+                items = tempAction!!.items + erasedItems
             )
+        }
+    }
+
+    Capturable(
+        controller = captureController,
+        onCaptured = { bitmap, error ->
+            // This is captured bitmap of a content inside Capturable Composable.
+            if (bitmap != null) {
+                // Bitmap is captured successfully. Do something with it!
+                println("Bitmap successful")
+                val pdfDocument = PdfDocument()
+                val pageInfo = PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, 1).create()
+                val page = pdfDocument.startPage(pageInfo)
+                val canvas : Canvas = page.canvas
+                canvas.drawBitmap(bitmap.asAndroidBitmap(), 0f, 0f, null)
+                pdfDocument.finishPage(page)
+
+                try {
+                    val timestamp = System.currentTimeMillis()
+                    val sdf = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
+                    val date = Date(timestamp)
+                    val formattedDate = sdf.format(date)
+                    val filename = "Canvas$formattedDate.pdf"
+                    val pdfFile = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), filename)
+                    pdfDocument.writeTo(FileOutputStream(pdfFile))
+                    // Handle success - the PDF is saved
+                    println("save successful")
+                } catch (e: IOException) {
+                    // Handle the error
+                    println("exception")
+                    println(e)
+                } finally {
+                    pdfDocument.close()
+                }
+
+            }
+
+            if (error != null) {
+                // Error occurred. Handle it!
+                println("laude lag gaye")
+            }
         }
     ) {
-        drawnItems.forEach { item ->
-            drawItem(item)
-        }
+        Canvas(modifier = Modifier
+            .fillMaxSize()
+            .background(canvasColor) // Default: White
+            .pointerInput(Unit) {
+                detectTapGestures(
+                    onTap = { point ->
+                        val canvasRelativeOffset = point + viewportOffset // NEW
 
-        tempItem?.let {
-            drawItem(it)
-        }
+                        if (cachedDrawInfo.drawMode == DrawMode.Selection) {
+                            val index = drawnItems.indexOfFirst { item ->
+                                ((item.shape == Shape.Rectangle || item.shape == Shape.Oval) && isPointCloseToRectangle(
+                                    canvasRelativeOffset,
+                                    item
+                                )) ||
+                                        ((item.shape == Shape.StraightLine && isPointCloseToLine(
+                                            canvasRelativeOffset,
+                                            item
+                                        )))
+                            }
+                            selectedItemIndex = index
+                        } else if (cachedDrawInfo.drawMode == DrawMode.Pen) {
+                            val item = DrawnItem(
+                                shape = cachedDrawInfo.shape,
+                                color = cachedDrawInfo.color,
+                                strokeWidth = cachedDrawInfo.strokeWidth,
+                                segmentPoints = mutableStateListOf(
+                                    canvasRelativeOffset,
+                                    canvasRelativeOffset
+                                )
+                            )
+                            drawnItems.add(item)
 
-        if (cachedDrawInfo.drawMode == DrawMode.Selection && selectedItemIndex != -1) {
-            if (selectedItemIndex < drawnItems.size) {
-                val item = drawnItems[selectedItemIndex]
-                if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
-                    val cornerSize = 40f
-                    // Assuming the first and last points are the corners of the rectangle/oval
-                    val start = item.segmentPoints.first()
-                    val end = item.segmentPoints.last()
-                    val corners = listOf(
+                            scope.launch {
+                                client.send(drawnItems.last())
+                            }
+
+                            undoStack.add(
+                                Action(
+                                    type = ActionType.ADD,
+                                    items = listOf(item)
+                                )
+                            )
+                            redoStack.clear()
+
+                        }
+                    }
+                )
+            }
+
+            .pointerInput(Unit) {
+                detectDragGestures(
+                    onDragStart = { change ->
+                        if (cachedDrawInfo.drawMode != DrawMode.Selection && cachedDrawInfo.drawMode != DrawMode.CanvasDrag) {
+                            tempOffset = change + viewportOffset
+                            tempItem = DrawnItem(
+                                shape = cachedDrawInfo.shape,
+                                color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) Color.White else cachedDrawInfo.color, // Original
+                                strokeWidth = cachedDrawInfo.strokeWidth,
+                                segmentPoints = mutableStateListOf(tempOffset, tempOffset)
+                            )
+
+                            if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Shape) {
+                                tempAction = Action(
+                                    type = ActionType.ADD,
+                                    items = listOf(tempItem!!)
+                                )
+                            }
+                        }
+                    },
+
+                    onDrag = { change, amount ->
+                        if (cachedDrawInfo.drawMode == DrawMode.CanvasDrag) {
+                            val newOffset = constrainOffset((viewportOffset - amount))
+                            if (newOffset != viewportOffset) {
+                                viewportOffset = newOffset
+                            } else {
+                                Log.d("CanvasDrag", "Boundary reached") // DEBUG & TEST PURPOSE (can be removed)
+                            }
+
+                        } else if (cachedDrawInfo.drawMode == DrawMode.Selection) {
+                            if (selectedItemIndex != -1) {
+                                val item = drawnItems[selectedItemIndex]
+
+                                if (tempAction == null) {
+                                    tempAction = Action(
+                                        type = ActionType.MODIFY,
+                                        items = emptyList(),
+                                        additionalInfo = item.copy() // initial state of the dragged shape
+                                    )
+                                }
+
+                                val updatedSegmentPoints = item.segmentPoints.map { offset ->
+                                    Offset(offset.x + amount.x, offset.y + amount.y)
+                                }.toMutableStateList()
+                                val updatedItem = item.copy(segmentPoints = updatedSegmentPoints)
+                                drawnItems[selectedItemIndex] = updatedItem
+
+                                tempAction = tempAction!!.copy(items = listOf(updatedItem))
+                            }
+                        } else {
+                            tempOffset = change.position + viewportOffset
+
+                            if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Eraser) {
+                                change.consume()
+                                if (tempItem != null) {
+                                    tempItem!!.segmentPoints.add(tempOffset)
+                                    if (cachedDrawInfo.drawMode == DrawMode.Eraser) {
+                                        eraseIntersectingItems()
+                                    }
+                                }
+                            } else if (cachedDrawInfo.drawMode == DrawMode.Shape) {
+                                if (tempItem != null && tempItem!!.segmentPoints.size == 2) {
+                                    tempItem!!.segmentPoints[1] = tempOffset
+                                }
+                            }
+                        }
+                    },
+
+                    onDragEnd = {
+                        when (cachedDrawInfo.drawMode) {
+                            DrawMode.Selection, DrawMode.CanvasDrag, DrawMode.Eraser -> {
+                                tempItem = null
+                            }
+
+                            else -> { // Drawing mode
+                                if (tempItem != null) {
+                                    drawnItems.add(tempItem!!)
+
+                                    scope.launch {
+                                        client.send(drawnItems.last())
+                                    }
+
+                                    if (tempAction != null) {
+                                        tempAction = tempAction!!.copy(items = listOf(tempItem!!))
+                                    }
+
+                                    tempItem = null
+
+                                    // Silenced the server sync, testing prototype
+//                                scope.launch {
+//                                    //Client().send(user_id, drawnItems.last())
+//                                    Client().fakeSend(user_id, drawnItems.last())
+//                                }
+                                }
+                            }
+
+                        }
+
+                        if (tempAction != null) {
+                            undoStack.add(tempAction!!)
+                            redoStack.clear()
+                            tempAction = null
+                        }
+
+//                    undoStack.add(drawnItems.toList())
+//                    redoStack.clear()
+                    }
+                )
+            }
+        ) {
+            drawnItems.forEach { item ->
+                drawTransformedItem(item, viewportOffset)
+            }
+
+            tempItem?.let {
+                if (cachedDrawInfo.drawMode != DrawMode.Eraser) {
+                    drawTransformedItem(it, viewportOffset)
+                }
+            }
+
+            if (cachedDrawInfo.drawMode == DrawMode.Selection && selectedItemIndex != -1) {
+                if (selectedItemIndex < drawnItems.size) {
+                    val item = drawnItems[selectedItemIndex]
+                    if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
+                        val cornerSize = 40f
+                        // Assuming the first and last points are the corners of the rectangle/oval
+                        val start = item.segmentPoints.first() - viewportOffset
+                        val end = item.segmentPoints.last() - viewportOffset
+                        val corners = listOf(
                             start,
                             Offset(end.x, start.y),
                             Offset(start.x, end.y),
                             end
-                    )
-                    corners.forEach { corner ->
-                        drawRect(
+                        )
+
+                        corners.forEach { corner ->
+                            drawRect(
                                 color = Color.Red,
-                                topLeft = Offset(corner.x - cornerSize / 2, corner.y - cornerSize / 2),
+                                topLeft = Offset(
+                                    corner.x - cornerSize / 2,
+                                    corner.y - cornerSize / 2
+                                ),
                                 size = Size(cornerSize, cornerSize),
                                 style = Stroke(width = 5f)
-                        )
-                    }
-                    if (item.shape == Shape.Oval) {
-                        drawRect(
+                            )
+                        }
+                        if (item.shape == Shape.Oval) {
+                            drawRect(
                                 color = Color.Red,
                                 topLeft = start,
                                 size = Size(end.x - start.x, end.y - start.y),
                                 style = Stroke(width = 3f)
-                        )
-                    }
-                } else if (item.shape == Shape.StraightLine) {
-                    val radius = 20f
-                    val circleColor = Color.Red
-                    // Draw circles at each segment point
-                    item.segmentPoints.forEach { point ->
-                        drawCircle(
+                            )
+                        }
+                    } else if (item.shape == Shape.StraightLine) {
+                        val radius = 20f
+                        val circleColor = Color.Red
+                        // Draw circles at each segment point
+                        item.segmentPoints.forEach { point ->
+                            drawCircle(
                                 color = circleColor,
-                                center = point,
+                                center = point - viewportOffset,
                                 radius = radius,
                                 style = Stroke(width = 5f)
-                        )
+                            )
+                        }
                     }
+                } else {
+                    selectedItemIndex = -1
                 }
-            } else {
-                selectedItemIndex = -1
             }
-        }
 
+        }
     }
 }
