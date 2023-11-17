@@ -38,6 +38,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import dev.shreyaspatil.capturable.Capturable
 import dev.shreyaspatil.capturable.controller.CaptureController
+import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
@@ -185,6 +186,7 @@ fun checkIntersection(line: Pair<Offset, Offset>, item: DrawnItem): Boolean {
 @Composable
 fun Whiteboard(
     drawInfo: DrawInfo,
+    drawnItems: SnapshotStateList<DrawnItem>,
     undoStack: MutableList<Action>,
     redoStack: MutableList<Action>,
     captureController: CaptureController,
@@ -318,6 +320,10 @@ fun Whiteboard(
                             )
                             drawnItems.add(item)
 
+                            scope.launch {
+                                client.send(drawnItems.last())
+                            }
+
                             undoStack.add(
                                 Action(
                                     type = ActionType.ADD,
@@ -409,6 +415,10 @@ fun Whiteboard(
                             else -> { // Drawing mode
                                 if (tempItem != null) {
                                     drawnItems.add(tempItem!!)
+
+                                    scope.launch {
+                                        client.send(drawnItems.last())
+                                    }
 
                                     if (tempAction != null) {
                                         tempAction = tempAction!!.copy(items = listOf(tempItem!!))

@@ -77,8 +77,7 @@ data class Pg (
 @Serializable
 enum class Shape { Rectangle, Oval, Line, StraightLine }
 
-// Stores all the drawn items (lines, straight lines, rectangles, ovals, erasing lines)
-var drawnItems = mutableStateListOf<DrawnItem>()
+
 
 // Checks if a point is close enough to a rectangle/oval
 fun isPointCloseToRectangle(point: Offset, item: DrawnItem): Boolean {
