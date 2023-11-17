@@ -10,11 +10,12 @@ Sohaib Nadeem (s26nadee@uwaterloo.ca),
 ## Software Releases and Installation
 * version 0.1 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.1-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.1-build.apk))
 * version 0.2 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.2-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.2-build.apk))
+* version 0.3 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.3-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.3-build.apk))
 
 ## Project Links
 - [Project Proposal](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Project-Proposal)
 - Meeting minutes: [Sprint 1](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-1-Meeting-Minutes), 
-[Sprint 2](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-2-Meeting-Minutes)
+[Sprint 2](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-2-Meeting-Minutes), [Sprint 3](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-3-Meeting-Minutes)
 
 ***
 
