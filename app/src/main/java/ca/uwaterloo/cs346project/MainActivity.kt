@@ -32,6 +32,7 @@ import java.io.File
 
 var user_id = -1
 val client = Client()
+var offline = true
 class MainActivity : ComponentActivity() {
     override fun onStop() {
         super.onStop()
@@ -48,7 +49,6 @@ class MainActivity : ComponentActivity() {
         super.onCreate(savedInstanceState)
         val drawnItemsDataFile = File(filesDir, "drawnItemsData.json")
         val sessionIdFile = File(filesDir, "session_id.txt")
-
         if (drawnItemsDataFile.exists()) {
             val json = drawnItemsDataFile.readText()
             val type = object : TypeToken<List<DrawnItem>>() {}.type
@@ -67,7 +67,6 @@ class MainActivity : ComponentActivity() {
 
         setContent {
             var page by remember { mutableStateOf(Pg()) }
-
             CS346ProjectTheme {
                 if (page.curPage == CurrentPage.HomePage) {
                     HomePage(page, setPage = {page = it})

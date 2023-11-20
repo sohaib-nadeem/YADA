@@ -136,12 +136,15 @@ fun UpperBar(
                     .fillMaxWidth()
             ) {
                 UpperBarIconButton(icon = ImageVector.vectorResource(id = R.drawable.arrow_back_24px), color = Color.LightGray) {
-                    val sessionIdFile = File(context.filesDir, "session_id.txt")
-                    sessionIdFile.writeText(client.session_id.toString())
+                    if (!offline) {
+                        val sessionIdFile = File(context.filesDir, "session_id.txt")
+                        sessionIdFile.writeText(client.session_id.toString())
+                    }
                     setPage(page.copy(curPage = CurrentPage.HomePage))
                 }
                 Button(onClick = {}) {
-                    Text("Session ID: ${client.session_id.toString()}")
+                    if (offline) Text("Offline Session")
+                    else Text("Session ID: ${client.session_id.toString()}")
                 }
 
                 // Undo button
