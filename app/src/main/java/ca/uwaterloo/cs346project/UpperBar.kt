@@ -6,21 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.MutableState
-import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -29,7 +21,6 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
 import dev.shreyaspatil.capturable.controller.CaptureController
 import java.io.File
 
@@ -111,6 +102,7 @@ fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Actio
 
 
 
+/*
 @Composable
 fun UpperBar(
     drawnItems: SnapshotStateList<DrawnItem>,
@@ -132,10 +124,14 @@ fun UpperBar(
                 horizontalArrangement = Arrangement.Start,
                 verticalAlignment = Alignment.Top,
                 modifier = Modifier
-                    .padding(8.dp)
+                    //.padding(6.dp)
                     .fillMaxWidth()
+
             ) {
-                UpperBarIconButton(icon = ImageVector.vectorResource(id = R.drawable.arrow_back_24px), color = Color.LightGray) {
+                UpperBarIconButton(
+                    icon = ImageVector.vectorResource(id = R.drawable.arrow_back_24px),
+                    color = Color.LightGray
+                ) {
                     if (!offline) {
                         val sessionIdFile = File(context.filesDir, "session_id.txt")
                         sessionIdFile.writeText(client.session_id.toString())
@@ -146,6 +142,14 @@ fun UpperBar(
                     if (offline) Text("Offline Session")
                     else Text("Session ID: ${client.session_id.toString()}")
                 }
+            }
+
+            Row(
+                horizontalArrangement = Arrangement.End,
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier.fillMaxWidth()
+            ){
+
 
                 // Undo button
                 UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.undo_24px), color = Color.LightGray) {
@@ -182,3 +186,198 @@ fun UpperBar(
         }
     }
 }
+*/
+
+
+@Composable
+fun UpperBar(
+    drawnItems: SnapshotStateList<DrawnItem>,
+    undoStack: MutableList<Action>,
+    redoStack: MutableList<Action>,
+    page: Pg,
+    setPage: (Pg) -> Unit,
+    captureController: CaptureController
+) {
+    val context = LocalContext.current
+    Row(
+        horizontalArrangement = Arrangement.SpaceEvenly,
+        verticalAlignment = Alignment.Top,
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth()
+    ) {
+        Box(modifier = Modifier.weight(3f)) {
+            Row(
+                horizontalArrangement = Arrangement.Start,
+                verticalAlignment = Alignment.Top,
+                modifier = Modifier
+                    .padding(8.dp)
+                    .fillMaxWidth()
+
+            ) {
+                UpperBarIconButton(
+                    icon = ImageVector.vectorResource(id = R.drawable.arrow_back_24px),
+                    color = Color.LightGray
+                ) {
+                    if (!offline) {
+                        val sessionIdFile = File(context.filesDir, "session_id.txt")
+                        sessionIdFile.writeText(client.session_id.toString())
+                    }
+                    setPage(page.copy(curPage = CurrentPage.HomePage))
+                }
+                Button(onClick = {}) {
+                    if (offline) Text("Offline")
+                    else Text("Session ID: ${client.session_id.toString()}")
+                }
+
+
+                /*UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.save_24px), color = Color.LightGray) {
+                    // save button
+                    captureController.capture()
+                }*/
+
+                // Undo button
+                UpperBarIconButton(
+                    ImageVector.vectorResource(id = R.drawable.undo_24px),
+                    color = Color.LightGray
+                ) {
+                    if (undoStack.size >= 1) {
+                        performUndo(drawnItems, undoStack, redoStack)
+                    }
+                }
+
+                // Redo button
+                UpperBarIconButton(
+                    ImageVector.vectorResource(id = R.drawable.redo_24px),
+                    color = Color.LightGray
+                ) {
+                    if (redoStack.isNotEmpty()) {
+                        performRedo(drawnItems, undoStack, redoStack)
+                    }
+                }
+
+                UpperBarIconButton(
+                    ImageVector.vectorResource(id = R.drawable.delete_24px),
+                    color = Color.LightGray
+                ) {
+                    if (drawnItems.isNotEmpty()) {
+                        val deleteAction = Action(
+                            type = ActionType.REMOVE,
+                            items = drawnItems.toList()
+                        )
+
+                        undoStack.add(deleteAction)
+                        drawnItems.clear()
+                        redoStack.clear()
+                    }
+                }
+
+                UpperBarIconButton(
+                    ImageVector.vectorResource(id = R.drawable.save_24px),
+                    color = Color.LightGray
+                ) {
+                    // save button
+                    captureController.capture()
+                }
+
+                UpperBarIconButton(
+                    ImageVector.vectorResource(id = R.drawable.upload_file_24px),
+                    color = Color.LightGray
+                ) {
+                    // save button
+                    //captureController.capture()
+                }
+            }
+        }
+    }
+}
+
+// 2 rows
+/*Composable
+fun UpperBar(
+    drawnItems: SnapshotStateList<DrawnItem>,
+    undoStack: MutableList<Action>,
+    redoStack: MutableList<Action>,
+    page: Pg,
+    setPage: (Pg) -> Unit,
+    captureController: CaptureController
+) {
+    val context = LocalContext.current
+    Column(
+        modifier = Modifier
+            .padding(8.dp)
+            .fillMaxWidth()
+    ) {
+        Row(
+            horizontalArrangement = Arrangement.Start,
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            UpperBarIconButton(
+                icon = ImageVector.vectorResource(id = R.drawable.arrow_back_24px),
+                color = Color.LightGray
+            ) {
+                if (!offline) {
+                    val sessionIdFile = File(context.filesDir, "session_id.txt")
+                    sessionIdFile.writeText(client.session_id.toString())
+                }
+                setPage(page.copy(curPage = CurrentPage.HomePage))
+            }
+            Button(onClick = {}) {
+                if (offline) Text("Offline Session")
+                else Text("Session ID: ${client.session_id.toString()}")
+            }
+        }
+
+        Row(
+            horizontalArrangement = Arrangement.End, // Adjust as needed
+            verticalAlignment = Alignment.Top,
+            modifier = Modifier.fillMaxWidth()
+        ) {
+            // Undo button
+            UpperBarIconButton(
+                ImageVector.vectorResource(id = R.drawable.undo_24px),
+                color = Color.LightGray
+            ) {
+                if (undoStack.size >= 1) {
+                    performUndo(drawnItems, undoStack, redoStack)
+                }
+            }
+
+            // Redo button
+            UpperBarIconButton(
+                ImageVector.vectorResource(id = R.drawable.redo_24px),
+                color = Color.LightGray
+            ) {
+                if (redoStack.isNotEmpty()) {
+                    performRedo(drawnItems, undoStack, redoStack)
+                }
+            }
+
+            UpperBarIconButton(
+                ImageVector.vectorResource(id = R.drawable.delete_24px),
+                color = Color.LightGray
+            ) {
+                if (drawnItems.isNotEmpty()) {
+                    val deleteAction = Action(
+                        type = ActionType.REMOVE,
+                        items = drawnItems.toList()
+                    )
+
+                    undoStack.add(deleteAction)
+                    drawnItems.clear()
+                    redoStack.clear()
+                }
+            }
+
+            UpperBarIconButton(
+                ImageVector.vectorResource(id = R.drawable.save_24px),
+                color = Color.LightGray
+            ) {
+                // save button
+                captureController.capture()
+            }
+        }
+    }
+}
+*/
