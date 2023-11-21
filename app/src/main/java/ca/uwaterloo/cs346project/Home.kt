@@ -35,7 +35,9 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.google.gson.reflect.TypeToken
 import kotlinx.coroutines.runBlocking
+import java.io.File
 
 fun makeToast(context: Context, text: String){
     Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
@@ -57,8 +59,20 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                         Text(text = "Whiteboard", fontSize = 50.sp)
                     }
                     Box(modifier = Modifier.weight(1f)) {
+                        Button(onClick = {
+                            setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                            offline = true
+                        },
+                            modifier = Modifier
+                                .width(200.dp)
+                                .height(40.dp)) {
+                            Text("Offline Mode", fontSize=20.sp)
+                        }
+                    }
+                    Box(modifier = Modifier.weight(1f)) {
                         OutlinedButton(onClick = { runBlocking {
                             if (client.create()) {
+                                offline = false
                                 setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
                             } else {
                                 val text = "Failed to create"
@@ -74,6 +88,7 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                     Box(modifier = Modifier.weight(1f)) {
                         Button(onClick = { runBlocking {
                                 if (client.join(client.session_id.toString())) {
+                                    offline = false
                                     setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
                                 } else {
                                     val text = "Failed to open previous canvas"
@@ -86,11 +101,13 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                             Text("Open Previous", fontSize=20.sp)
                         }
                     }
+
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedButton(onClick =
                             {
                                 runBlocking {
                                     if (client.join(joinSessionID)) {
+                                        offline = false
                                         setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
                                     } else {
                                         val text = "invalid Session ID"
