@@ -52,7 +52,7 @@ fun toDrawnItem(canvasobject: CanvasObject): DrawnItem {
 }
 
 class Client {
-    val server_ip = "172.20.10.2"
+    val server_ip = "169.254.137.47"
     var session_id = -1
     var user_id = -1
     private val client = HttpClient(CIO) {

@@ -24,8 +24,9 @@ import android.content.res.Resources
 fun WhiteboardScreen(page : Pg, setPage: (Pg) -> Unit) {
     var drawInfo by remember { mutableStateOf(DrawInfo()) }
     val scope = rememberCoroutineScope()
-    val undoStack: MutableList<Action> = mutableListOf()
-    val redoStack: MutableList<Action> = mutableListOf()
+    val undoStack = remember { mutableListOf<Action>() }
+    val redoStack = remember { mutableListOf<Action>() }
+
     var drawnItems = remember { mutableStateListOf<DrawnItem>() }
     val capturableController = rememberCaptureController()
     val metrics = Resources.getSystem().displayMetrics
