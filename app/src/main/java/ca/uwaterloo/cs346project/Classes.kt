@@ -10,6 +10,7 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 data class DrawnItem(
+    val objectId: Int = 0
     val shape: Shape = Shape.Line,
     var color: Color = Color.Black,
     val strokeWidth: Float = 4f,
@@ -22,13 +23,15 @@ data class DrawnItem(
 
         other as DrawnItem
 
-        if (shape != other.shape) return false
-        if (color != other.color) return false
-        if (strokeWidth != other.strokeWidth) return false
-        if (segmentPoints.size != other.segmentPoints.size) return false
-        if (!segmentPoints.containsAll(other.segmentPoints)) return false
+        return objectId == other.objectId
 
-        return true
+//        if (shape != other.shape) return false
+//        if (color != other.color) return false
+//        if (strokeWidth != other.strokeWidth) return false
+//        if (segmentPoints.size != other.segmentPoints.size) return false
+//        if (!segmentPoints.containsAll(other.segmentPoints)) return false
+//
+//        return true
     }
 
     override fun hashCode(): Int {
@@ -53,7 +56,7 @@ data class DrawInfo (
 data class Action(
     val type: ActionType,
     val items: List<DrawnItem>, // The items involved in the action
-    val additionalInfo: Any? = null // Optional field for any extra information needed
+    //val additionalInfo: Any? = null // Optional field for any extra information needed
 )
 
 

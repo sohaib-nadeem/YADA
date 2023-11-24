@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import dev.shreyaspatil.capturable.controller.CaptureController
+import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
@@ -61,7 +63,7 @@ fun performUndo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Actio
                 lastAction.items.firstOrNull()?.let { modifiedItem ->
                     val index = drawnItems.indexOfFirst { it == modifiedItem }
                     if (index != -1) {
-                        drawnItems[index] = lastAction.additionalInfo as DrawnItem
+                        drawnItems[index] = lastAction.items[0]
                     }
                 }
             }
@@ -84,13 +86,21 @@ fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Actio
                 drawnItems.removeAll(lastAction.items)
             }
             ActionType.MODIFY -> {
+                val index = drawnItems.indexOfFirst { it == lastAction.items[0] }
+                if (index != -1) {
+                    drawnItems[index] = lastAction.items.first()
+                }
+                //lastAction.items[0] = drawnItems[index]
+
                 // Find and revert the item to its modified state
-                lastAction.additionalInfo?.let { originalItem ->
+                lastAction.items[0].let { originalItem ->
                     val index = drawnItems.indexOfFirst { it == originalItem }
                     if (index != -1) {
                         drawnItems[index] = lastAction.items.first()
                     }
+
                 }
+
             }
         }
         // Move the action back to undoStack
@@ -108,6 +118,7 @@ fun UpperBar(
     setPage: (Pg) -> Unit,
     captureController: CaptureController
 ) {
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     Row(
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -152,6 +163,9 @@ fun UpperBar(
                 ) {
                     if (undoStack.size >= 1) {
                         performUndo(drawnItems, undoStack, redoStack)
+                        scope.launch {
+                            client.sendAction(Action(ActionType.ADD, listOf()))
+                        }
                     }
                 }
 
@@ -162,6 +176,9 @@ fun UpperBar(
                 ) {
                     if (redoStack.isNotEmpty()) {
                         performRedo(drawnItems, undoStack, redoStack)
+                        scope.launch {
+                            client.sendAction(Action(ActionType.ADD, listOf())
+                        }
                     }
                 }
 

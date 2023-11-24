@@ -129,6 +129,18 @@ class Client {
         return listOf()
     }
 
+    suspend fun sendAction(action:Action) {
+        return
+    }
+
+    suspend fun receiveAction(action:Action): List<Action> {
+        return listOf()
+    }
+
+}
+
+fun applyAction(action: Action, drawnItems: DrawnItem) {
+
 }
 
 

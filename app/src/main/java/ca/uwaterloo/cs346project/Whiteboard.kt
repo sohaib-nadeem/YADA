@@ -365,8 +365,7 @@ fun Whiteboard(
                                 if (tempAction == null) {
                                     tempAction = Action(
                                         type = ActionType.MODIFY,
-                                        items = emptyList(),
-                                        additionalInfo = item.copy() // initial state of the dragged shape
+                                        items = listOf(item.copy()), //  store initial state of the dragged shape
                                     )
                                 }
 
@@ -409,10 +408,6 @@ fun Whiteboard(
 
                                     scope.launch {
                                         client.send(drawnItems.last())
-                                    }
-
-                                    if (tempAction != null) {
-                                        tempAction = tempAction!!.copy(items = listOf(tempItem!!))
                                     }
 
                                     tempItem = null
