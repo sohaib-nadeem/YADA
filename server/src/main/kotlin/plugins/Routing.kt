@@ -10,10 +10,11 @@ import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import models.CanvasObject
 import service.SessionServiceInMemory
+import service.SessionService
 
 // move input handling to service class!!!
 fun Application.configureRouting() {
-    val sessionService = SessionServiceInMemory // SessionService()
+    val sessionService = SessionService() // SessionServiceInMemory
     routing {
         get("/create") {
             //print("create called")
@@ -42,11 +43,12 @@ fun Application.configureRouting() {
         }
 
         post("/send/{session_id}/{user_id}") {
-            //println("send called")
+            println("send called")
             val session_id = call.parameters["session_id"]?.toInt()
             val user_id = call.parameters["user_id"]?.toInt()
 
             val canvasObject = call.receive<CanvasObject>()
+            println(canvasObject)
             val status = sessionService.addObject(session_id, user_id, canvasObject)
 
             // check session and user ids are valid
