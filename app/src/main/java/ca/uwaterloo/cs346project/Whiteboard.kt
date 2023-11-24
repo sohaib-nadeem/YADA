@@ -365,7 +365,7 @@ fun Whiteboard(
                                 if (tempAction == null) {
                                     tempAction = Action(
                                         type = ActionType.MODIFY,
-                                        items = listOf(item.copy()), //  store initial state of the dragged shape
+                                        items = listOf(item.copy(), item.copy()), //  store initial state of the dragged shape
                                     )
                                 }
 
@@ -375,7 +375,7 @@ fun Whiteboard(
                                 val updatedItem = item.copy(segmentPoints = updatedSegmentPoints)
                                 drawnItems[selectedItemIndex] = updatedItem
 
-                                tempAction = tempAction!!.copy(items = listOf(updatedItem))
+                                tempAction = tempAction!!.copy(items = listOf(tempAction!!.items[0], updatedItem), )
                             }
                         } else {
                             tempOffset = change.position + viewportOffset

@@ -1,5 +1,6 @@
 package ca.uwaterloo.cs346project
 import android.graphics.Canvas
+import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.snapshots.SnapshotStateList
@@ -43,7 +44,9 @@ fun toCanvasObject(item: DrawnItem): CanvasObject {
 
 fun toDrawnItem(canvasobject: CanvasObject): DrawnItem {
 
-    return DrawnItem(canvasobject.shape,
+    return DrawnItem(
+        0,
+        canvasobject.shape,
         Color(canvasobject.color),
         canvasobject.strokeWidth,
         canvasobject.segmentPoints.map {
@@ -139,8 +142,6 @@ class Client {
 
 }
 
-fun applyAction(action: Action, drawnItems: DrawnItem) {
 
-}
 
 
