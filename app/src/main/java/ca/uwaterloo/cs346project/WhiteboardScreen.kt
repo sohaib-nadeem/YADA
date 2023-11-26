@@ -24,21 +24,22 @@ import android.content.res.Resources
 fun WhiteboardScreen(page : Pg, setPage: (Pg) -> Unit) {
     var drawInfo by remember { mutableStateOf(DrawInfo()) }
     val scope = rememberCoroutineScope()
-    val undoStack = remember { mutableListOf<Action>() }
-    val redoStack = remember { mutableListOf<Action>() }
-
+    val undoStack = remember { mutableListOf<Action<DrawnItem>>() }
+    val redoStack = remember { mutableListOf<Action<DrawnItem>>() }
     var drawnItems = remember { mutableStateListOf<DrawnItem>() }
     val capturableController = rememberCaptureController()
     val metrics = Resources.getSystem().displayMetrics
     val screenWidth = metrics.widthPixels.toFloat()
     val screenHeight = metrics.heightPixels.toFloat()
 
-    LaunchedEffect(true) {
-        scope.launch {
-            while (true) {
-                val items = client.receive()
-                drawnItems.addAll(items)
-                delay(100L)
+    if (!offline) {
+        LaunchedEffect(true) {
+            scope.launch {
+                while (true) {
+                    val items = client.receiveAction()
+                    items.forEach { applyAction(it, drawnItems) }
+                    delay(100L)
+                }
             }
         }
     }

@@ -1,11 +1,12 @@
 import io.ktor.server.engine.*
 import io.ktor.server.netty.*
+import models.ActionObject
 import plugins.configureRouting
 import plugins.configureSerialization
 import models.ActiveUser
 import models.ObjectPoint
 import models.Session
-import models.SessionObject
+import models.SessionAction
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.StdOutSqlLogger
@@ -25,7 +26,8 @@ fun main() {
         // create tables (Session, ActiveUser, SessionObject) if they don't exist
         SchemaUtils.create (Session)
         SchemaUtils.create (ActiveUser)
-        SchemaUtils.create (SessionObject)
+        SchemaUtils.create (SessionAction)
+        SchemaUtils.create (ActionObject)
         SchemaUtils.create (ObjectPoint)
     }
 

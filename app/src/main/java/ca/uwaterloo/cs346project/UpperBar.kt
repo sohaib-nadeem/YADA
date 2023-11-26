@@ -39,20 +39,20 @@ fun UpperBarIconButton(icon: ImageVector, color: Color, onClick: () -> Unit) {
     }
 }
 
-fun applyAction(action: Action, drawnItems: MutableList<DrawnItem>) {
+fun applyAction(action: Action<DrawnItem>, drawnItems: MutableList<DrawnItem>) {
     when (action.type) {
         ActionType.ADD -> {
             drawnItems.addAll(action.items)
         }
         ActionType.REMOVE -> {
-            drawnItems.removeAll(action.items)
+            action.items.forEach { actionItem -> drawnItems.removeAll { actionItem.userObjectId == it.userObjectId }  }
         }
         ActionType.MODIFY -> {
             if (action.items.size != 2) {
                 Log.d("performRedo", "ERROR: 'items' field does have 2 DrawnItem")
                 throw IllegalArgumentException("ERROR: 'items' field does have 2 DrawnItem")
             } else {
-                val index = drawnItems.indexOfFirst { it == action.items[0] }
+                val index = drawnItems.indexOfFirst { it.userObjectId == action.items[0].userObjectId }
                 if (index != -1) {
                     drawnItems[index] = action.items[1]
                 }
@@ -61,7 +61,7 @@ fun applyAction(action: Action, drawnItems: MutableList<DrawnItem>) {
     }
 }
 
-fun createReversedAction(action: Action): Action {
+fun createReversedAction(action: Action<DrawnItem>): Action<DrawnItem> {
     when (action.type) {
         ActionType.ADD -> {
             return Action(ActionType.REMOVE, action.items)
@@ -81,7 +81,7 @@ fun createReversedAction(action: Action): Action {
 }
 
 
-fun performUndo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action>, redoStack: MutableList<Action>) {
+fun performUndo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action<DrawnItem>>, redoStack: MutableList<Action<DrawnItem>>) {
     Log.d("performUndo", "performUndo Triggered")
     undoStack.removeLastOrNull()?.let { lastAction ->
         applyAction(createReversedAction(lastAction), drawnItems)
@@ -91,7 +91,7 @@ fun performUndo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Actio
 }
 
 
-fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action>, redoStack: MutableList<Action>) {
+fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action<DrawnItem>>, redoStack: MutableList<Action<DrawnItem>>) {
     Log.d("performRedo", "performRedo Triggered")
     redoStack.removeLastOrNull()?.let { lastAction ->
         applyAction(lastAction, drawnItems)
@@ -104,8 +104,8 @@ fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Actio
 @Composable
 fun UpperBar(
     drawnItems: SnapshotStateList<DrawnItem>,
-    undoStack: MutableList<Action>,
-    redoStack: MutableList<Action>,
+    undoStack: MutableList<Action<DrawnItem>>,
+    redoStack: MutableList<Action<DrawnItem>>,
     page: Pg,
     setPage: (Pg) -> Unit,
     captureController: CaptureController
@@ -155,8 +155,13 @@ fun UpperBar(
                 ) {
                     if (undoStack.size >= 1) {
                         performUndo(drawnItems, undoStack, redoStack)
-                        scope.launch {
-                            //client.sendAction(createReversedAction(undoStack.last()))
+
+                        // also send action to server if online
+                        if (!offline) {
+                            val actionToSend = redoStack.last()
+                            scope.launch {
+                                client.sendAction(createReversedAction(actionToSend))
+                            }
                         }
                     }
                 }
@@ -168,8 +173,13 @@ fun UpperBar(
                 ) {
                     if (redoStack.isNotEmpty()) {
                         performRedo(drawnItems, undoStack, redoStack)
-                        scope.launch {
-                            //client .sendAction(redoStack.last())
+
+                        // also send action to server if online
+                        if (!offline) {
+                            val actionToSend = undoStack.last()
+                            scope.launch {
+                                client.sendAction(actionToSend)
+                            }
                         }
                     }
                 }
@@ -187,6 +197,13 @@ fun UpperBar(
                         undoStack.add(deleteAction)
                         drawnItems.clear()
                         redoStack.clear()
+
+                        // also send action to server if online
+                        if (!offline) {
+                            scope.launch {
+                                client.sendAction(deleteAction)
+                            }
+                        }
                     }
                 }
 

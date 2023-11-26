@@ -8,6 +8,7 @@ import io.ktor.server.response.respond
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
+import models.Action
 import models.CanvasObject
 import service.SessionServiceInMemory
 import service.SessionService
@@ -42,14 +43,14 @@ fun Application.configureRouting() {
             // need to check status on client and repeat request or handle failure somehow!!!
         }
 
-        post("/send/{session_id}/{user_id}") {
-            println("send called")
+        post("/sendAction/{session_id}/{user_id}") {
+            println("send action called")
             val session_id = call.parameters["session_id"]?.toInt()
             val user_id = call.parameters["user_id"]?.toInt()
 
-            val canvasObject = call.receive<CanvasObject>()
-            println(canvasObject)
-            val status = sessionService.addObject(session_id, user_id, canvasObject)
+            val action = call.receive<Action<CanvasObject>>()
+            println(action)
+            val status = sessionService.addAction(session_id, user_id, action)
 
             // check session and user ids are valid
             if (status == 0) {
@@ -60,14 +61,15 @@ fun Application.configureRouting() {
             }
             // need to check status on client and repeat request or handle failure somehow!!!
         }
-        get("/receive/{session_id}/{user_id}") {
-            //println("receive called")
+
+        get("/receiveAction/{session_id}/{user_id}") {
+            println("receive action called")
             val session_id = call.parameters["session_id"]?.toInt()
             val user_id = call.parameters["user_id"]?.toInt()
 
-            val objectsToSend = sessionService.getUserObjects(session_id, user_id)
-            //objectsToSend.forEach({println(it)})
-            call.respond(objectsToSend)
+            val actionsToSend = sessionService.getUserActions(session_id, user_id)
+            //actionsToSend.forEach({println(it)})
+            call.respond(actionsToSend)
         }
     }
 }

@@ -60,11 +60,6 @@ class MainActivity : ComponentActivity() {
             client.session_id = text.toInt()
         }
 
-        runBlocking {
-            //user_id = Client().join()
-            user_id = client.fakeJoin()
-        }
-
         setContent {
             var page by remember { mutableStateOf(Pg()) }
             CS346ProjectTheme {

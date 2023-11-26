@@ -27,6 +27,7 @@ import kotlinx.serialization.json.*
 
 @Serializable
 data class CanvasObject(
+    val userObjectId: Pair<Int, Int>,
     val shape: Shape = Shape.Line,
     val color: ULong = 0UL,
     val strokeWidth: Float = 4f,
@@ -37,7 +38,7 @@ data class CanvasObject(
 
 }
 fun toCanvasObject(item: DrawnItem): CanvasObject {
-    return CanvasObject(item.shape,item.color.value,item.strokeWidth, segmentPoints = item.segmentPoints.toList().map{
+    return CanvasObject(item.userObjectId, item.shape,item.color.value,item.strokeWidth, segmentPoints = item.segmentPoints.toList().map{
         CanvasObject.Offset(it.x, it.y)
     })
 }
@@ -45,7 +46,7 @@ fun toCanvasObject(item: DrawnItem): CanvasObject {
 fun toDrawnItem(canvasobject: CanvasObject): DrawnItem {
 
     return DrawnItem(
-        0,
+        canvasobject.userObjectId,
         canvasobject.shape,
         Color(canvasobject.color),
         canvasobject.strokeWidth,
@@ -55,7 +56,7 @@ fun toDrawnItem(canvasobject: CanvasObject): DrawnItem {
 }
 
 class Client {
-    val server_ip = "169.254.137.47"
+    val server_ip = "172.20.10.2"
     var session_id = -1
     var user_id = -1
     private val client = HttpClient(CIO) {
@@ -82,6 +83,7 @@ class Client {
         user_id = session_user.second
         return true
     }
+
     suspend fun join(session_id: String): Boolean {
         var user_id = 0
         try {
@@ -96,52 +98,39 @@ class Client {
         return true
     }
 
-    suspend fun send(item:DrawnItem) {
-        val itemToSend = toCanvasObject(item)
-        println(item)
+    suspend fun sendAction(action: Action<DrawnItem>) {
+        // convert items in action from DrawnItem to CanvasObject
+        val actionToSend = Action<CanvasObject>(action.type, action.items.map { toCanvasObject(it) })
+        println(actionToSend)
         try {
-            val response = client.post("http://$server_ip:8080/send/$session_id/$user_id") {
+            val response = client.post("http://$server_ip:8080/sendAction/$session_id/$user_id") {
                 contentType(ContentType.Application.Json)
-                setBody(itemToSend)
+                setBody(actionToSend)
             }
         } catch (e: Exception) {
             println(e.localizedMessage)
         }
+        return
     }
 
-    suspend fun receive(): List<DrawnItem> {
-        var items = listOf<CanvasObject>()
+    suspend fun receiveAction(): List<Action<DrawnItem>> {
+        var actionsReceived = listOf<Action<CanvasObject>>()
+
         try {
-           items = client.get("http://$server_ip:8080/receive/$session_id/$user_id").body()
+            actionsReceived = client.get("http://$server_ip:8080/receiveAction/$session_id/$user_id").body()
         } catch (e: Exception) {
             println(e.localizedMessage)
         }
-        return items.map({toDrawnItem(it)})
-    }
 
-
-    suspend fun fakeJoin(): Int {
-        return 0
-    }
-
-    suspend fun fakeSend(user_id:Int, item:DrawnItem) {
-        return
-    }
-
-    suspend fun fakeReceive(user_id:Int): List<CanvasObject> {
-        return listOf()
-    }
-
-    suspend fun sendAction(action:Action) {
-        return
-    }
-
-    suspend fun receiveAction(action:Action): List<Action> {
-        return listOf()
+        // convert items in actions received from CanvasObject to DrawnItem
+        return actionsReceived.map {
+            Action(
+                it.type,
+                it.items.map { canvasObject -> toDrawnItem(canvasObject) }
+            )
+        }
     }
 
 }
-
-
 
 

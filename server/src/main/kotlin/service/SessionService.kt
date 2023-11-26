@@ -1,6 +1,8 @@
 package service
 
-//import DatabaseFactory.dbQuery
+import models.Action
+import models.ActionObject
+import models.ActionType
 import models.CanvasObject
 import org.jetbrains.exposed.sql.ResultRow
 import org.jetbrains.exposed.sql.insert
@@ -13,7 +15,7 @@ import sessionData
 import models.ActiveUser
 import models.ObjectPoint
 import models.Session
-import models.SessionObject
+import models.SessionAction
 import org.jetbrains.exposed.sql.Expression
 import org.jetbrains.exposed.sql.SortOrder
 import org.jetbrains.exposed.sql.SqlExpressionBuilder.eq
@@ -26,57 +28,13 @@ import org.jetbrains.exposed.sql.batchInsert
 
 //import org.jetbrains.exposed.sql.transactions.experimental.newSuspendedTransaction
 
-fun ULong.toLongReinterpret(): Long {
-    if (this > Long.MAX_VALUE.toULong()) {
-        return this.toLong()
-    }
-    else {
-
-    }
-    return 0L
-}
-
-fun Long.toULongReinterpret(): ULong {
-    if (this > ULong.MAX_VALUE.toLong()) {
-
-    }
-    else {
-
-    }
-    return 0UL
-}
 
 class SessionService {
-    /*
-    suspend fun getAllUsers(): List<ProfileType> = dbQuery {
-        Profile.selectAll().map { toProfileType(it) }
-    }
+    // TODO: change to suspend functions?
+    // TODO: need to handle failed queries! (in all methods)
 
-    suspend fun getProfileByEmail(email: String): ProfileType? = dbQuery {
-        Profile.select {
-            (Profile.email eq email)
-        }.mapNotNull { toProfileType(it) }
-            .singleOrNull()
-    }
-
-    suspend fun registerProfile(email: String, passwordHash: String) = dbQuery {
-        Profile.insert {
-            it[Profile.email] = email
-            it[password] = passwordHash
-        }
-    }
-
-    private fun toProfileType(row: ResultRow): ProfileType =
-        ProfileType(
-            id = row[Profile.id],
-            email = row[Profile.email],
-            password = row[Profile.password]
-        )
-    */
-
-    // change to suspend functions!!!
-
-    // return session code too!!!
+    // TODO: return session code as well
+    // TODO: make session code random
     fun createSession(): Int {
         println("${Thread.currentThread().name}")
 
@@ -88,15 +46,13 @@ class SessionService {
 
             // INSERT INTO Session (sessionCode) VALUES ("ABC123")
             session_id = (Session.insert {
-                it[sessionCode] = "ABC123" // needs to be random
+                it[sessionCode] = "ABC123"
             } get Session.id).value
-
-            // print row inserted
-            //println("Session: ${Session.selectAll()}")
         }
         return session_id
     }
 
+    // TODO: make user_id id global? (unique to each device)
     fun addUser(session_id: Int?): Int {
         println("${Thread.currentThread().name}")
 
@@ -114,17 +70,14 @@ class SessionService {
 
             user_id = (ActiveUser.insert {
                 it[sessionId] = session_id
-                it[initialReceiveObjectId] = 0 //???
+                it[initialReceiveActionId] = 0
             } get ActiveUser.id).value
-
-            // print row inserted
-            //println("ActiveUser: ${ActiveUser.selectAll()}")
         }
         return user_id
     }
 
     // assumes user_id is valid
-    fun addObject(session_id: Int?, user_id: Int?, canvasObject: CanvasObject): Int {
+    fun addAction(session_id: Int?, user_id: Int?, action: Action<CanvasObject>): Int {
         // check session and user ids are valid
         if (session_id == null || user_id == null) {
             // fail
@@ -135,99 +88,135 @@ class SessionService {
             // print sql to std-out
             addLogger(StdOutSqlLogger)
 
-            val objectId = (SessionObject.insert {
+            val action_id = (SessionAction.insert {
                 it[sessionId] = session_id
                 it[userId] = user_id
-                it[shape] = canvasObject.shape.toUInt()
-                it[color] = canvasObject.color.toLong()
-                it[strokeWidth] = canvasObject.strokeWidth
-            } get SessionObject.id).value
-            println(objectId)
+                it[actionType] = action.type.toUInt()
+            } get SessionAction.id).value
 
-            var sequenceNumber = 0
-            val result = ObjectPoint.batchInsert(canvasObject.segmentPoints) { point ->
-                this[ObjectPoint.objectId] = objectId
-                this[ObjectPoint.sequenceNumber] = sequenceNumber
-                this[ObjectPoint.xVal] = point.x
-                this[ObjectPoint.yVal] = point.y
-                sequenceNumber++
+            println(action_id)
+
+            action.items.forEach { canvasObject ->
+                val objectId = (ActionObject.insert {
+                    it[actionId] = action_id
+                    it[shape] = canvasObject.shape.toUInt()
+                    it[color] = canvasObject.color.toLong()
+                    it[strokeWidth] = canvasObject.strokeWidth
+                    it[userObjectIdUser] = canvasObject.userObjectId.first
+                    it[userObjectIdObject] = canvasObject.userObjectId.second
+                } get ActionObject.id).value
+
+                var sequenceNumber = 0
+                val result = ObjectPoint.batchInsert(canvasObject.segmentPoints) { point ->
+                    this[ObjectPoint.objectId] = objectId
+                    this[ObjectPoint.sequenceNumber] = sequenceNumber
+                    this[ObjectPoint.xVal] = point.x
+                    this[ObjectPoint.yVal] = point.y
+                    sequenceNumber++
+                }
             }
+            // TODO: is it possible to use batch insert into ActionObject as well?
 
             return@transaction 0
         }
-        // need to handle failed queries!!! (in all methods)
 
         return status
     }
 
     // assumes user_id is valid
-    fun getUserObjects(session_id: Int?, user_id: Int?): List<CanvasObject> {
+    fun getUserActions(session_id: Int?, user_id: Int?): List<Action<CanvasObject>> {
         // check session and user ids are valid
         if (session_id == null || user_id == null) {
             // fail
             return listOf()
         }
 
-        var objectsToSend = listOf<CanvasObject>()
-
-        transaction(sessionData) {
+        val actionsToSend = transaction(sessionData) {
             // print sql to std-out
             addLogger(StdOutSqlLogger)
 
-            var initialReceiveObjectId = ActiveUser
-                .select() { ActiveUser.id eq user_id }// compare session id??? depends on whethe user_id id local or global!!!
-                .single()[ActiveUser.initialReceiveObjectId]
-            //.first()[ActiveUser.initialReceiveObjectId]
-            //.let { ActiveUser.id }
+            // TODO: check user is actually in session?
+            var initialReceiveActionId = ActiveUser
+                .select() { ActiveUser.id eq user_id }
+                .single()[ActiveUser.initialReceiveActionId]
 
-            // get objects to send from SessionObject table
-            objectsToSend = SessionObject
+            // get actions to send from SessionAction table along with their ids
+            val actionsToSendWithIds = SessionAction
                 .select() {
-                    (SessionObject.sessionId eq session_id) and
-                    (SessionObject.userId neq user_id!!) and
-                    (SessionObject.id greaterEq initialReceiveObjectId)
+                    (SessionAction.sessionId eq session_id) and
+                            (SessionAction.userId neq user_id!!) and
+                            (SessionAction.id greaterEq initialReceiveActionId)
                 }
                 .map {
-                    CanvasObject(
-                        it[SessionObject.id].value,
-                        CanvasObject.Shape.fromUInt(it[SessionObject.shape]),
-                        it[SessionObject.color].toULong(),
-                        it[SessionObject.strokeWidth],
-                        listOf()
+                    Pair(
+                        it[SessionAction.id].value,
+                        Action<CanvasObject>(
+                            ActionType.fromUInt(it[SessionAction.actionType]),
+                            listOf()
+                        )
                     )
                 }
 
-            objectsToSend.forEach() {
-                it.segmentPoints = ObjectPoint
+            // get objects for each action
+            actionsToSendWithIds.forEach { (actionId, action) ->
+                // get objects to send from SessionObject table
+                val objectsWithIds = ActionObject
                     .select() {
-                        (ObjectPoint.objectId eq it.objectId)
+                        (ActionObject.actionId eq actionId)
                     }
-                    .orderBy(ObjectPoint.sequenceNumber to SortOrder.ASC)
+                    .orderBy(ActionObject.id to SortOrder.ASC)
                     .map {
-                        CanvasObject.Offset(
-                            it[ObjectPoint.xVal],
-                            it[ObjectPoint.yVal]
+                        Pair(
+                            it[ActionObject.id].value,
+                            CanvasObject(
+                                Pair(
+                                    it[ActionObject.userObjectIdUser],
+                                    it[ActionObject.userObjectIdObject]
+                                ),
+                                CanvasObject.Shape.fromUInt(it[ActionObject.shape]),
+                                it[ActionObject.color].toULong(),
+                                it[ActionObject.strokeWidth],
+                                listOf()
+                            )
                         )
                     }
-            }
 
-            // optimize the above two queries with a join!!!
+                // get segmentPoints for each object
+                objectsWithIds.forEach() { (objectId, canvasObject) ->
+                    canvasObject.segmentPoints = ObjectPoint
+                        .select() {
+                            (ObjectPoint.objectId eq objectId)
+                        }
+                        .orderBy(ObjectPoint.sequenceNumber to SortOrder.ASC)
+                        .map {
+                            CanvasObject.Offset(
+                                it[ObjectPoint.xVal],
+                                it[ObjectPoint.yVal]
+                            )
+                        }
+                }
+
+                // get only the objects from objectsWithIds
+                action.items = objectsWithIds.map { it.second }
+            }
+            // TODO: is it possible optimize the above queries with a join?
 
             // update initialReceiveObjectId
-            initialReceiveObjectId = objectsToSend.last().objectId + 1
+            initialReceiveActionId = actionsToSendWithIds.maxOf { it.first } + 1
 
             ActiveUser.update({ ActiveUser.id eq user_id }) {
-                it[ActiveUser.initialReceiveObjectId] = initialReceiveObjectId
+                it[ActiveUser.initialReceiveActionId] = initialReceiveActionId
             }
 
-            // object id needed by user?
-            //return@transaction 0
-            if (objectsToSend.size > 0) {
-                println("initialReceiveObjectId is: ${initialReceiveObjectId}")
-                println("objectsToSend is not empty: ${objectsToSend}")
-            }
+            return@transaction actionsToSendWithIds
+        }.map { it.second }
+
+        // TODO: remove
+        if (actionsToSend.size > 0) {
+            //println("initialReceiveObjectId is: ${initialReceiveActionId}")
+            println("objectsToSend is not empty: ${actionsToSend}")
         }
 
-        return objectsToSend
+        return actionsToSend
     }
 }
