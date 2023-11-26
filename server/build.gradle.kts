@@ -2,6 +2,7 @@ val ktor_version: String by project
 val kotlin_version: String by project
 val logback_version: String by project
 val junit_version: String by project
+val exposedVersion: String by project
 
 plugins {
     application
@@ -10,7 +11,7 @@ plugins {
 }
 
 application {
-    mainClass.set("MainKt")
+    mainClass.set("ApplicationKt")
 }
 
 dependencies {
@@ -23,4 +24,8 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-json:$ktor_version")
     //implementation("androidx.compose.ui:ui-graphics")
     //implementation(project(":app"))
+    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
+    implementation("org.xerial:sqlite-jdbc:3.30.1")
 }

@@ -10,33 +10,20 @@ import kotlin.math.min
 import kotlin.math.sqrt
 
 data class DrawnItem(
+    // pair of user id and a user-specific object id
+    val userObjectId: Pair<Int, Int> = Pair(-1, 0),
     val shape: Shape = Shape.Line,
     var color: Color = Color.Black,
     val strokeWidth: Float = 4f,
-//    val segmentPoints : SnapshotStateList<Pair<Offset, Offset>> = mutableStateListOf()
     val segmentPoints: SnapshotStateList<Offset> = mutableStateListOf()
 ) {
-    override fun equals(other: Any?): Boolean {
-        if (this === other) return true
-        if (javaClass != other?.javaClass) return false
-
-        other as DrawnItem
-
-        if (shape != other.shape) return false
-        if (color != other.color) return false
-        if (strokeWidth != other.strokeWidth) return false
-        if (segmentPoints.size != other.segmentPoints.size) return false
-        if (!segmentPoints.containsAll(other.segmentPoints)) return false
-
-        return true
-    }
-
-    override fun hashCode(): Int {
-        var result = shape.hashCode()
-        result = 31 * result + color.hashCode()
-        result = 31 * result + strokeWidth.hashCode()
-        result = 31 * result + segmentPoints.hashCode()
-        return result
+    companion object {
+        var maxUserObjectId = 0
+        fun newUserObjectId(): Pair<Int, Int> {
+            val userObjectId = maxUserObjectId
+            maxUserObjectId++
+            return Pair(client.user_id, userObjectId)
+        }
     }
 }
 
@@ -49,18 +36,20 @@ data class DrawInfo (
     val strokeWidth: Float = 4f,
 )
 
-
-data class Action(
+@Serializable
+data class Action<T>(
     val type: ActionType,
-    val items: List<DrawnItem>, // The items involved in the action
-    val additionalInfo: Any? = null // Optional field for any extra information needed
+    // MODIFY: items stores 2 (only 2) DrawnItem objects, [oldState, newState] (order preserved)
+    // REMOVE: items stores the DrawnItem objects to be removed from drawnItems array
+    // ADD: items stores a list of DrawnItem objects to be added to drawnItems array
+    val items: List<T>, // The items involved in the action
 )
 
-
-enum class ActionType {
-    ADD, // When a new item is added
-    REMOVE, // When an item is removed (e.g., erasing)
-    MODIFY // When an item is modified (e.g., moved or resized)
+@Serializable
+enum class ActionType(val value: UInt) {
+    ADD(0U), // When a new item is added
+    REMOVE(1U), // When an item is removed (e.g., erasing)
+    MODIFY(2U); // When an item is modified (e.g., moved or resized)
 }
 
 
@@ -74,8 +63,14 @@ enum class CurrentPage {HomePage, WhiteboardPage}
 data class Pg (
     var curPage : CurrentPage = CurrentPage.HomePage
 )
+
 @Serializable
-enum class Shape { Rectangle, Oval, Line, StraightLine }
+enum class Shape(val value: UInt) {
+    Rectangle(0U),
+    Oval(1U),
+    Line(2U),
+    StraightLine(3U);
+}
 
 
 

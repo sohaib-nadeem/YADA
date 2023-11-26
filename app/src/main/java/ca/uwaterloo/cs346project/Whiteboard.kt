@@ -178,8 +178,8 @@ fun checkIntersection(line: Pair<Offset, Offset>, item: DrawnItem): Boolean {
 fun Whiteboard(
     drawInfo: DrawInfo,
     drawnItems: SnapshotStateList<DrawnItem>,
-    undoStack: MutableList<Action>,
-    redoStack: MutableList<Action>,
+    undoStack: MutableList<Action<DrawnItem>>,
+    redoStack: MutableList<Action<DrawnItem>>,
     captureController: CaptureController,
     screenWidth: Float,
     screenHeight: Float
@@ -192,7 +192,7 @@ fun Whiteboard(
     var selectedItemIndex by remember { mutableStateOf(-1) }
     val scope = rememberCoroutineScope()
     var tempOffset by remember { mutableStateOf(Offset(0f,0f)) }
-    var tempAction by remember { mutableStateOf<Action?>(null) }
+    var tempAction by remember { mutableStateOf<Action<DrawnItem>?>(null) }
 
     // Left upper corner offset of the current screen relative to the canvas
     var viewportOffset by remember { mutableStateOf(Offset.Zero) }
@@ -228,7 +228,7 @@ fun Whiteboard(
 
         if (erasedItems.isNotEmpty()) {
             if (tempAction == null) {
-                tempAction = Action(
+                tempAction = Action<DrawnItem>(
                     type =  ActionType.REMOVE,
                     items = emptyList()
                 )
@@ -293,14 +293,16 @@ fun Whiteboard(
                                     canvasRelativeOffset,
                                     item
                                 )) ||
-                                        ((item.shape == Shape.StraightLine && isPointCloseToLine(
-                                            canvasRelativeOffset,
-                                            item
-                                        )))
+                                ((item.shape == Shape.StraightLine && isPointCloseToLine(
+                                    canvasRelativeOffset,
+                                    item
+                                )))
                             }
                             selectedItemIndex = index
                         } else if (cachedDrawInfo.drawMode == DrawMode.Pen) {
+                            // add dot to drawnItems
                             val item = DrawnItem(
+                                userObjectId = DrawnItem.newUserObjectId(),
                                 shape = cachedDrawInfo.shape,
                                 color = cachedDrawInfo.color,
                                 strokeWidth = cachedDrawInfo.strokeWidth,
@@ -311,17 +313,20 @@ fun Whiteboard(
                             )
                             drawnItems.add(item)
 
-                            scope.launch {
-                                client.send(drawnItems.last())
-                            }
-
-                            undoStack.add(
-                                Action(
-                                    type = ActionType.ADD,
-                                    items = listOf(item)
-                                )
+                            // add action performed to undo stack and clear redo stack
+                            val tapAction = Action(
+                                type = ActionType.ADD,
+                                items = listOf(item)
                             )
+                            undoStack.add(tapAction)
                             redoStack.clear()
+
+                            // also send action to server if online
+                            if (!offline) {
+                                scope.launch {
+                                    client.sendAction(tapAction)
+                                }
+                            }
 
                         }
                     }
@@ -334,6 +339,7 @@ fun Whiteboard(
                         if (cachedDrawInfo.drawMode != DrawMode.Selection && cachedDrawInfo.drawMode != DrawMode.CanvasDrag) {
                             tempOffset = change + viewportOffset
                             tempItem = DrawnItem(
+                                userObjectId = DrawnItem.newUserObjectId(),
                                 shape = cachedDrawInfo.shape,
                                 color = if (cachedDrawInfo.drawMode == DrawMode.Eraser) Color.White else cachedDrawInfo.color, // Original
                                 strokeWidth = cachedDrawInfo.strokeWidth,
@@ -365,8 +371,7 @@ fun Whiteboard(
                                 if (tempAction == null) {
                                     tempAction = Action(
                                         type = ActionType.MODIFY,
-                                        items = emptyList(),
-                                        additionalInfo = item.copy() // initial state of the dragged shape
+                                        items = listOf(item.copy(), item.copy()) //  store initial state of the dragged shape
                                     )
                                 }
 
@@ -376,7 +381,7 @@ fun Whiteboard(
                                 val updatedItem = item.copy(segmentPoints = updatedSegmentPoints)
                                 drawnItems[selectedItemIndex] = updatedItem
 
-                                tempAction = tempAction!!.copy(items = listOf(updatedItem))
+                                tempAction = tempAction!!.copy(items = listOf(tempAction!!.items[0], updatedItem))
                             }
                         } else {
                             tempOffset = change.position + viewportOffset
@@ -406,30 +411,23 @@ fun Whiteboard(
                             else -> { // Drawing mode
                                 if (tempItem != null) {
                                     drawnItems.add(tempItem!!)
-
-                                    scope.launch {
-                                        client.send(drawnItems.last())
-                                    }
-
-                                    if (tempAction != null) {
-                                        tempAction = tempAction!!.copy(items = listOf(tempItem!!))
-                                    }
-
                                     tempItem = null
-
-                                    // Silenced the server sync, testing prototype
-//                                scope.launch {
-//                                    //Client().send(user_id, drawnItems.last())
-//                                    Client().fakeSend(user_id, drawnItems.last())
-//                                }
                                 }
                             }
-
                         }
 
                         if (tempAction != null) {
                             undoStack.add(tempAction!!)
                             redoStack.clear()
+
+                            // also send action to server if online
+                            if (!offline) {
+                                val actionToSend = tempAction!!
+                                scope.launch {
+                                    client.sendAction(actionToSend)
+                                }
+                            }
+
                             tempAction = null
                         }
 

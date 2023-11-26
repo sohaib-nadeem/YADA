@@ -13,6 +13,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +23,7 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
 import dev.shreyaspatil.capturable.controller.CaptureController
+import kotlinx.coroutines.launch
 import java.io.File
 
 @Composable
@@ -37,62 +39,62 @@ fun UpperBarIconButton(icon: ImageVector, color: Color, onClick: () -> Unit) {
     }
 }
 
-
-fun performUndo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action>, redoStack: MutableList<Action>) {
-    Log.d("performUndo", "performUndo Triggered")
-
-    undoStack.removeLastOrNull()?.let { lastAction ->
-        Log.d("performUndo", "${lastAction}")
-
-        when (lastAction.type) {
-            ActionType.ADD -> {
-                Log.d("performUndo", "Undo ADD operation triggered")
-                // Remove the items added by the last action
-                drawnItems.removeAll(lastAction.items)
-            }
-            ActionType.REMOVE -> {
-                Log.d("performUndo", "Undo REMOVE operation triggered")
-                // Add back the items removed by the last action
-                drawnItems.addAll(lastAction.items)
-            }
-            ActionType.MODIFY -> {
-                Log.d("performUndo", "Undo MODIFY operation triggered")
-                // Find and replace the modified item with its original state
-                lastAction.items.firstOrNull()?.let { modifiedItem ->
-                    val index = drawnItems.indexOfFirst { it == modifiedItem }
-                    if (index != -1) {
-                        drawnItems[index] = lastAction.additionalInfo as DrawnItem
-                    }
+fun applyAction(action: Action<DrawnItem>, drawnItems: MutableList<DrawnItem>) {
+    when (action.type) {
+        ActionType.ADD -> {
+            drawnItems.addAll(action.items)
+        }
+        ActionType.REMOVE -> {
+            action.items.forEach { actionItem -> drawnItems.removeAll { actionItem.userObjectId == it.userObjectId }  }
+        }
+        ActionType.MODIFY -> {
+            if (action.items.size != 2) {
+                Log.d("performRedo", "ERROR: 'items' field does have 2 DrawnItem")
+                throw IllegalArgumentException("ERROR: 'items' field does have 2 DrawnItem")
+            } else {
+                val index = drawnItems.indexOfFirst { it.userObjectId == action.items[0].userObjectId }
+                if (index != -1) {
+                    drawnItems[index] = action.items[1]
                 }
             }
         }
+    }
+}
+
+fun createReversedAction(action: Action<DrawnItem>): Action<DrawnItem> {
+    when (action.type) {
+        ActionType.ADD -> {
+            return Action(ActionType.REMOVE, action.items)
+        }
+        ActionType.REMOVE -> {
+            return Action(ActionType.ADD, action.items)
+        }
+        ActionType.MODIFY -> {
+            if (action.items.size != 2) {
+                Log.d("createReversedAction", "ERROR: 'items' field does have 2 DrawnItem")
+                throw IllegalArgumentException("ERROR: 'items' field does have 2 DrawnItem")
+            } else {
+                return Action(ActionType.MODIFY, listOf(action.items[1], action.items[0]))
+            }
+        }
+    }
+}
+
+
+fun performUndo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action<DrawnItem>>, redoStack: MutableList<Action<DrawnItem>>) {
+    Log.d("performUndo", "performUndo Triggered")
+    undoStack.removeLastOrNull()?.let { lastAction ->
+        applyAction(createReversedAction(lastAction), drawnItems)
         // Move the action to redoStack
         redoStack.add(lastAction)
     }
 }
 
 
-fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action>, redoStack: MutableList<Action>) {
+fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action<DrawnItem>>, redoStack: MutableList<Action<DrawnItem>>) {
+    Log.d("performRedo", "performRedo Triggered")
     redoStack.removeLastOrNull()?.let { lastAction ->
-        when (lastAction.type) {
-            ActionType.ADD -> {
-                // Add back the items that were previously added and then undone
-                drawnItems.addAll(lastAction.items)
-            }
-            ActionType.REMOVE -> {
-                // Remove the items that were previously removed and then undone
-                drawnItems.removeAll(lastAction.items)
-            }
-            ActionType.MODIFY -> {
-                // Find and revert the item to its modified state
-                lastAction.additionalInfo?.let { originalItem ->
-                    val index = drawnItems.indexOfFirst { it == originalItem }
-                    if (index != -1) {
-                        drawnItems[index] = lastAction.items.first()
-                    }
-                }
-            }
-        }
+        applyAction(lastAction, drawnItems)
         // Move the action back to undoStack
         undoStack.add(lastAction)
     }
@@ -102,12 +104,13 @@ fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Actio
 @Composable
 fun UpperBar(
     drawnItems: SnapshotStateList<DrawnItem>,
-    undoStack: MutableList<Action>,
-    redoStack: MutableList<Action>,
+    undoStack: MutableList<Action<DrawnItem>>,
+    redoStack: MutableList<Action<DrawnItem>>,
     page: Pg,
     setPage: (Pg) -> Unit,
     captureController: CaptureController
 ) {
+    val scope = rememberCoroutineScope()
     val context = LocalContext.current
     Row(
         horizontalArrangement = Arrangement.SpaceEvenly,
@@ -152,6 +155,14 @@ fun UpperBar(
                 ) {
                     if (undoStack.size >= 1) {
                         performUndo(drawnItems, undoStack, redoStack)
+
+                        // also send action to server if online
+                        if (!offline) {
+                            val actionToSend = redoStack.last()
+                            scope.launch {
+                                client.sendAction(createReversedAction(actionToSend))
+                            }
+                        }
                     }
                 }
 
@@ -162,6 +173,14 @@ fun UpperBar(
                 ) {
                     if (redoStack.isNotEmpty()) {
                         performRedo(drawnItems, undoStack, redoStack)
+
+                        // also send action to server if online
+                        if (!offline) {
+                            val actionToSend = undoStack.last()
+                            scope.launch {
+                                client.sendAction(actionToSend)
+                            }
+                        }
                     }
                 }
 
@@ -178,6 +197,13 @@ fun UpperBar(
                         undoStack.add(deleteAction)
                         drawnItems.clear()
                         redoStack.clear()
+
+                        // also send action to server if online
+                        if (!offline) {
+                            scope.launch {
+                                client.sendAction(deleteAction)
+                            }
+                        }
                     }
                 }
 
