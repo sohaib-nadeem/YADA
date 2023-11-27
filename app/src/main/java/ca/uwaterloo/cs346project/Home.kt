@@ -2,6 +2,7 @@ package ca.uwaterloo.cs346project
 
 import android.content.Context
 import android.content.res.Configuration
+import android.os.Looper
 import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
@@ -15,7 +16,9 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.width
 import androidx.compose.material3.Button
+import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -33,18 +36,26 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.google.gson.reflect.TypeToken
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.GlobalScope
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
 import java.io.File
 
 fun makeToast(context: Context, text: String){
+    Looper.prepare()
     Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+    Looper.loop()
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
+    var loading by remember { mutableStateOf(false) }
     var joinSessionID by remember { mutableStateOf("") }
     val context = LocalContext.current
     BoxWithConstraints {
@@ -70,11 +81,15 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                         }
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        OutlinedButton(onClick = { runBlocking {
+                        OutlinedButton(onClick = {
+                            loading = true
+                            GlobalScope.launch(Dispatchers.IO) {
                             if (client.create()) {
+                                loading = false
                                 offline = false
                                 setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
                             } else {
+                                loading = false
                                 val text = "Failed to create"
                                 makeToast(context,text)
                             } }
@@ -86,11 +101,15 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                         }
                     }
                     Box(modifier = Modifier.weight(1f)) {
-                        Button(onClick = { runBlocking {
+                        Button(onClick = {
+                            loading = true
+                            GlobalScope.launch(Dispatchers.IO) {
                                 if (client.join(client.session_id.toString())) {
+                                    loading = false
                                     offline = false
                                     setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
                                 } else {
+                                    loading = false
                                     val text = "Failed to open previous canvas"
                                     makeToast(context,text)
                                 }
@@ -105,11 +124,14 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedButton(onClick =
                             {
-                                runBlocking {
+                                loading = true
+                                GlobalScope.launch(Dispatchers.IO) {
                                     if (client.join(joinSessionID)) {
+                                        loading = false
                                         offline = false
                                         setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
                                     } else {
+                                        loading = false
                                         val text = "invalid Session ID"
                                         makeToast(context,text)
                                     }
@@ -129,6 +151,13 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                                 label = { Text("Session ID") }
                             )
                     }
+                }
+                if (loading) {
+                    CircularProgressIndicator(
+                        modifier = Modifier.width(64.dp).align(Alignment.Center)
+                            .offset(y = (-30).dp),
+                        color = MaterialTheme.colorScheme.secondary
+                    )
                 }
             }
     }
