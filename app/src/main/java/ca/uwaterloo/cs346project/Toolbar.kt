@@ -2,11 +2,15 @@ package ca.uwaterloo.cs346project
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Create
@@ -79,19 +83,23 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
             Row(
                 modifier = Modifier
                     .background(MaterialTheme.colorScheme.secondaryContainer)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .height(55.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
                 // Line Weight Setting
                 if (toolbarExtensionSetting == ToolbarExtensionSetting.StrokeWidthAdjustment) {
-                    Slider(
-                        value = drawInfo.strokeWidth,
-                        onValueChange = {
-                            setDrawInfo(drawInfo.copy(strokeWidth = it))
-                        },
-                        valueRange = 1f..MAX_STROKE_WIDTH
-                    )
+                    BoxWithConstraints {
+                        Slider(
+                            value = drawInfo.strokeWidth,
+                            modifier = Modifier.width(maxWidth - 80.dp),
+                            onValueChange = {
+                                setDrawInfo(drawInfo.copy(strokeWidth = it))
+                            },
+                            valueRange = 1f..MAX_STROKE_WIDTH
+                        )
+                    }
                 }
 
                 // Color Picker Setting
