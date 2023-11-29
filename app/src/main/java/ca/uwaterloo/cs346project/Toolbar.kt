@@ -83,7 +83,8 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
             Row(
                 modifier = Modifier
                     .background(MaterialTheme.colorScheme.secondaryContainer)
-                    .fillMaxWidth(),
+                    .fillMaxWidth()
+                    .height(55.dp),
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceEvenly
             ) {
