@@ -1,6 +1,8 @@
 package ca.uwaterloo.cs346project
 
+import android.content.Context
 import android.util.Log
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -38,6 +40,12 @@ fun UpperBarIconButton(icon: ImageVector, color: Color, onClick: () -> Unit) {
         )
     }
 }
+
+
+fun genToast(context: Context, text: String){
+    Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
+}
+
 
 fun applyAction(action: Action<DrawnItem>, drawnItems: MutableList<DrawnItem>) {
     when (action.type) {
@@ -213,6 +221,9 @@ fun UpperBar(
                 ) {
                     // save button
                     captureController.capture()
+                    // Display toast after saving
+                    val text = "Saved as PDF in Downloads"
+                    genToast(context, text)
                 }
 
                 UpperBarIconButton(
