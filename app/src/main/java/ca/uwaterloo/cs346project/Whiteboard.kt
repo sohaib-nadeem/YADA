@@ -22,11 +22,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.unit.IntSize
 import dev.shreyaspatil.capturable.Capturable
 import dev.shreyaspatil.capturable.controller.CaptureController
 import kotlinx.coroutines.launch
@@ -181,6 +183,7 @@ fun Whiteboard(
     undoStack: MutableList<Action<DrawnItem>>,
     redoStack: MutableList<Action<DrawnItem>>,
     captureController: CaptureController,
+    selectedImage: ImageBitmap?,
     screenWidth: Float,
     screenHeight: Float
 ){
@@ -200,7 +203,7 @@ fun Whiteboard(
     // Default canvas size (3000px * 3000px)
     // Note: Emulator screen size is 1080px * 2154px
     val canvasWidth = 3000f
-    val canvasHeight = 6000f
+    val canvasHeight = 3000f
 
     val maxViewportOffset = Offset(max(canvasWidth - screenWidth, 0f), max(canvasHeight - screenHeight, 0f))
 
@@ -437,6 +440,13 @@ fun Whiteboard(
                 )
             }
         ) {
+            if (selectedImage != null) {
+                drawImage(
+                    image = selectedImage,
+                    dstSize = IntSize(3000, 3000)
+                )
+            }
+
             drawnItems.forEach { item ->
                 drawTransformedItem(item, viewportOffset)
             }

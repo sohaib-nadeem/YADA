@@ -1,8 +1,11 @@
 package ca.uwaterloo.cs346project
 
 import android.content.Context
+import android.content.Intent
 import android.util.Log
 import android.widget.Toast
+import androidx.activity.compose.ManagedActivityResultLauncher
+import androidx.activity.result.ActivityResult
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -109,7 +112,8 @@ fun UpperBar(
     redoStack: MutableList<Action<DrawnItem>>,
     page: Pg,
     setPage: (Pg) -> Unit,
-    captureController: CaptureController
+    captureController: CaptureController,
+    launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -142,12 +146,6 @@ fun UpperBar(
                     if (offline) Text("Offline")
                     else Text("Session ID: ${client.session_id.toString()}")
                 }
-
-
-                /*UpperBarIconButton(ImageVector.vectorResource(id = R.drawable.save_24px), color = Color.LightGray) {
-                    // save button
-                    captureController.capture()
-                }*/
 
                 // Undo button
                 UpperBarIconButton(
@@ -223,8 +221,9 @@ fun UpperBar(
                     ImageVector.vectorResource(id = R.drawable.upload_file_24px),
                     color = Color.LightGray
                 ) {
-                    // save button
-                    //captureController.capture()
+                    val intent = Intent(Intent.ACTION_PICK)
+                    intent.type = "image/*"
+                    launcher.launch(intent)
                 }
             }
         }
