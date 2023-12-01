@@ -1,11 +1,11 @@
 package ca.uwaterloo.cs346project
 
-import android.content.Context
+import android.app.Activity
 import android.content.Intent
+import android.graphics.BitmapFactory
 import android.util.Log
-import android.widget.Toast
-import androidx.activity.compose.ManagedActivityResultLauncher
-import androidx.activity.result.ActivityResult
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -23,6 +23,8 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
@@ -30,6 +32,7 @@ import androidx.compose.ui.unit.dp
 import dev.shreyaspatil.capturable.controller.CaptureController
 import kotlinx.coroutines.launch
 import java.io.File
+import java.io.InputStream
 
 @Composable
 fun UpperBarIconButton(icon: ImageVector, color: Color, onClick: () -> Unit) {
@@ -113,10 +116,25 @@ fun UpperBar(
     page: Pg,
     setPage: (Pg) -> Unit,
     captureController: CaptureController,
-    launcher: ManagedActivityResultLauncher<Intent, ActivityResult>
+    setSelectedImage: (ImageBitmap) -> Unit
 ) {
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+
+    val launcher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.StartActivityForResult()
+    ) { result ->
+        if (result.resultCode == Activity.RESULT_OK) {
+            result.data?.data?.let { uri ->
+                val inputStream: InputStream? = context.contentResolver.openInputStream(uri)
+                inputStream?.let {
+                    val imageBitmap = BitmapFactory.decodeStream(it).asImageBitmap()
+                    setSelectedImage(imageBitmap)
+                }
+            }
+        }
+    }
+
     Row(
         horizontalArrangement = Arrangement.SpaceEvenly,
         verticalAlignment = Alignment.Top,
