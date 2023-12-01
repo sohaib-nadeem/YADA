@@ -49,6 +49,8 @@ import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.FontStyle
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -98,8 +100,10 @@ fun PortraitUI(page: Pg, setPage: (Pg) -> Unit) {
         val (titleRef, buttonBoxRef) = createRefs()
 
         Text(
-            text = "YADA\nWhiteboard",
+            text = "YADA",
             fontSize = 50.sp,
+            fontWeight = FontWeight.Bold,
+            fontStyle = FontStyle.Italic,
             lineHeight = 50.sp,
             modifier = Modifier.constrainAs(titleRef) {
                 top.linkTo(parent.top, margin = 50.dp)
@@ -276,8 +280,10 @@ fun LandscapeUI(page: Pg, setPage: (Pg) -> Unit) {
             horizontalAlignment = Alignment.CenterHorizontally
         ) {
             Text(
-                text = "YADA Whiteboard",
+                text = "YADA",
                 fontSize = 40.sp,
+                fontWeight = FontWeight.Bold,
+                fontStyle = FontStyle.Italic,
                 modifier = Modifier
                     .align(Alignment.CenterHorizontally)
                     .offset(y=(-20).dp)
