@@ -1,5 +1,5 @@
 ## Description
-An android app that allows multiple users to draw on a canvas together in real-time, making sharing ideas easier and more interactive.
+YADA (Yet Another Drawing App) is an android app that allows multiple users to draw on a canvas together in real-time, making sharing ideas easier and more interactive.
 
 ## Team Members
 Akshita Choudhury (a49choud@uwaterloo.ca),
@@ -11,11 +11,12 @@ Sohaib Nadeem (s26nadee@uwaterloo.ca),
 * version 0.1 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.1-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.1-build.apk))
 * version 0.2 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.2-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.2-build.apk))
 * version 0.3 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.3-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.3-build.apk))
+* version 0.4 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.4-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.4-build.apk))
 
 ## Project Links
 - [Project Proposal](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Project-Proposal)
 - Meeting minutes: [Sprint 1](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-1-Meeting-Minutes), 
-[Sprint 2](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-2-Meeting-Minutes), [Sprint 3](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-3-Meeting-Minutes)
+[Sprint 2](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-2-Meeting-Minutes), [Sprint 3](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-3-Meeting-Minutes), [Sprint 4](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-4-Meeting-Minutes)
 
 ***
 
