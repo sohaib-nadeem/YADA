@@ -22,30 +22,59 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
 import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.TransformOrigin
 import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.compose.ui.graphics.drawscope.DrawScope
 import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
 import dev.shreyaspatil.capturable.Capturable
 import dev.shreyaspatil.capturable.controller.CaptureController
 import kotlinx.coroutines.launch
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
-import java.lang.Float.max
 import java.text.SimpleDateFormat
 import java.util.Date
 
+fun Offset.calculateNewOffset(
+    centroid: Offset,
+    pan: Offset,
+    zoom: Float,
+    gestureZoom: Float,
+    size: IntSize
+): Offset {
+    val newScale = maxOf(1f, zoom * gestureZoom)
+    val newOffset = (this + centroid / zoom) -
+            (centroid / newScale + pan / zoom)
+    return Offset(
+        newOffset.x.coerceIn(0f, (size.width / zoom) * (zoom - 1f)),
+        newOffset.y.coerceIn(0f, (size.height / zoom) * (zoom - 1f))
+    )
+}
+
+fun transformOffset(zoom: Float, offset: Offset, offsetToTransform: Offset): Offset {
+    return Offset(offsetToTransform.x / zoom + offset.x, offsetToTransform.y / zoom + offset.y)
+}
+
+fun transformAmount(zoom: Float, offset: Offset, amountToTransform: Offset): Offset {
+    return Offset(amountToTransform.x / zoom, amountToTransform.y / zoom)
+}
 
 // Helper function to draw a given DrawnItem
-fun DrawScope.drawTransformedItem(item: DrawnItem, viewportOffset: Offset) {
+fun DrawScope.drawItem(item: DrawnItem) {
     // Create a new item with translated points
     val translatedItem = item.copy(
         segmentPoints = item.segmentPoints.map { point ->
             Offset(
-                x = point.x - viewportOffset.x,
-                y = point.y - viewportOffset.y
+                x = point.x,
+                y = point.y
             )
         }.toMutableStateList()
     )
@@ -181,8 +210,7 @@ fun Whiteboard(
     undoStack: MutableList<Action<DrawnItem>>,
     redoStack: MutableList<Action<DrawnItem>>,
     captureController: CaptureController,
-    screenWidth: Float,
-    screenHeight: Float
+    selectedImage: ImageBitmap?,
 ){
     val canvasColor = Color.White
     var cachedDrawInfo by remember { mutableStateOf(DrawInfo()) }
@@ -194,21 +222,14 @@ fun Whiteboard(
     var tempOffset by remember { mutableStateOf(Offset(0f,0f)) }
     var tempAction by remember { mutableStateOf<Action<DrawnItem>?>(null) }
 
-    // Left upper corner offset of the current screen relative to the canvas
-    var viewportOffset by remember { mutableStateOf(Offset.Zero) }
+    var zoom by remember { mutableStateOf(1f) }
+    var offset by remember { mutableStateOf(Offset.Zero) }
 
-    // Default canvas size (3000px * 3000px)
-    // Note: Emulator screen size is 1080px * 2154px
-    val canvasWidth = 3000f
-    val canvasHeight = 6000f
+    val density = LocalDensity.current;
+    val configuration = LocalConfiguration.current;
+    var screenWidthPx = with(density) {configuration.screenWidthDp.dp.roundToPx()}
+    var screenHeightPx = with(density) {configuration.screenHeightDp.dp.roundToPx()}
 
-    val maxViewportOffset = Offset(max(canvasWidth - screenWidth, 0f), max(canvasHeight - screenHeight, 0f))
-
-    fun constrainOffset(offset: Offset): Offset {
-        val x = offset.x.coerceIn(0f, maxViewportOffset.x)
-        val y = offset.y.coerceIn(0f, maxViewportOffset.y)
-        return Offset(x, y)
-    }
 
     fun eraseIntersectingItems() {
         val erasedItems = mutableListOf<DrawnItem>()
@@ -285,7 +306,7 @@ fun Whiteboard(
             .pointerInput(Unit) {
                 detectTapGestures(
                     onTap = { point ->
-                        val canvasRelativeOffset = point + viewportOffset // NEW
+                        val canvasRelativeOffset = transformOffset(zoom, offset, point) // NEW
 
                         if (cachedDrawInfo.drawMode == DrawMode.Selection) {
                             val index = drawnItems.indexOfFirst { item ->
@@ -337,7 +358,7 @@ fun Whiteboard(
                 detectDragGestures(
                     onDragStart = { change ->
                         if (cachedDrawInfo.drawMode != DrawMode.Selection && cachedDrawInfo.drawMode != DrawMode.CanvasDrag) {
-                            tempOffset = change + viewportOffset
+                            tempOffset = transformOffset(zoom, offset, change)
                             tempItem = DrawnItem(
                                 userObjectId = DrawnItem.newUserObjectId(),
                                 shape = cachedDrawInfo.shape,
@@ -356,35 +377,41 @@ fun Whiteboard(
                     },
 
                     onDrag = { change, amount ->
-                        if (cachedDrawInfo.drawMode == DrawMode.CanvasDrag) {
-                            val newOffset = constrainOffset((viewportOffset - amount))
-                            if (newOffset != viewportOffset) {
-                                viewportOffset = newOffset
-                            } else {
-                                Log.d("CanvasDrag", "Boundary reached") // DEBUG & TEST PURPOSE (can be removed)
-                            }
-
-                        } else if (cachedDrawInfo.drawMode == DrawMode.Selection) {
+                        val transformedAmount = transformAmount(zoom, offset, amount)
+                        if (cachedDrawInfo.drawMode == DrawMode.Selection) {
                             if (selectedItemIndex != -1) {
                                 val item = drawnItems[selectedItemIndex]
 
                                 if (tempAction == null) {
                                     tempAction = Action(
                                         type = ActionType.MODIFY,
-                                        items = listOf(item.copy(), item.copy()) //  store initial state of the dragged shape
+                                        items = listOf(
+                                            item.copy(),
+                                            item.copy()
+                                        ) //  store initial state of the dragged shape
                                     )
                                 }
 
-                                val updatedSegmentPoints = item.segmentPoints.map { offset ->
-                                    Offset(offset.x + amount.x, offset.y + amount.y)
-                                }.toMutableStateList()
+                                val updatedSegmentPoints = item.segmentPoints
+                                    .map { offset ->
+                                        Offset(
+                                            offset.x + transformedAmount.x,
+                                            offset.y + transformedAmount.y
+                                        )
+                                    }
+                                    .toMutableStateList()
                                 val updatedItem = item.copy(segmentPoints = updatedSegmentPoints)
                                 drawnItems[selectedItemIndex] = updatedItem
 
-                                tempAction = tempAction!!.copy(items = listOf(tempAction!!.items[0], updatedItem))
+                                tempAction = tempAction!!.copy(
+                                    items = listOf(
+                                        tempAction!!.items[0],
+                                        updatedItem
+                                    )
+                                )
                             }
                         } else {
-                            tempOffset = change.position + viewportOffset
+                            tempOffset = transformOffset(zoom, offset, change.position)
 
                             if (cachedDrawInfo.drawMode == DrawMode.Pen || cachedDrawInfo.drawMode == DrawMode.Eraser) {
                                 change.consume()
@@ -436,14 +463,40 @@ fun Whiteboard(
                     }
                 )
             }
+            .pointerInput(Unit) {
+                detectTransformGesturesCustom(
+                    onGesture = { centroid, pan, gestureZoom, _ ->
+                        if (cachedDrawInfo.drawMode == DrawMode.CanvasDrag) {
+                            offset = offset.calculateNewOffset(
+                                centroid, pan, zoom, gestureZoom, size
+                            )
+                            zoom = maxOf(1f, zoom * gestureZoom)
+                        }
+                    }
+                )
+            }
+            .graphicsLayer {
+                translationX = -offset.x * zoom
+                translationY = -offset.y * zoom
+                scaleX = zoom; scaleY = zoom
+                transformOrigin = TransformOrigin(0f, 0f)
+            }
         ) {
+            if (selectedImage != null) {
+                drawImage(
+                    image = selectedImage,
+                    dstSize = IntSize(screenWidthPx,screenHeightPx)
+
+                )
+            }
+
             drawnItems.forEach { item ->
-                drawTransformedItem(item, viewportOffset)
+                drawItem(item)
             }
 
             tempItem?.let {
                 if (cachedDrawInfo.drawMode != DrawMode.Eraser) {
-                    drawTransformedItem(it, viewportOffset)
+                    drawItem(it)
                 }
             }
 
@@ -453,8 +506,8 @@ fun Whiteboard(
                     if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
                         val cornerSize = 40f
                         // Assuming the first and last points are the corners of the rectangle/oval
-                        val start = item.segmentPoints.first() - viewportOffset
-                        val end = item.segmentPoints.last() - viewportOffset
+                        val start = item.segmentPoints.first()
+                        val end = item.segmentPoints.last()
                         val corners = listOf(
                             start,
                             Offset(end.x, start.y),
@@ -488,7 +541,7 @@ fun Whiteboard(
                         item.segmentPoints.forEach { point ->
                             drawCircle(
                                 color = circleColor,
-                                center = point - viewportOffset,
+                                center = point,
                                 radius = radius,
                                 style = Stroke(width = 5f)
                             )
