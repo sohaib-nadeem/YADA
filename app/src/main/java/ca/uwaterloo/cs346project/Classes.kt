@@ -57,7 +57,7 @@ const val MAX_STROKE_WIDTH = 140f
 
 enum class DrawMode { Pen, Eraser, Shape, CanvasDrag, Selection }
 
-enum class ToolbarExtensionSetting { ColorSelection, StrokeWidthAdjustment, ShapeSelection, SelectorTool, Hidden }
+enum class ToolbarExtensionSetting { ColorSelection, StrokeWidthAdjustment, ShapeSelection, Hidden }
 
 enum class CurrentPage {HomePage, WhiteboardPage}
 data class Pg (

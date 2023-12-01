@@ -158,13 +158,12 @@ fun Toolbar(drawInfo: DrawInfo, setDrawInfo: (DrawInfo) -> Unit) {
             }
 
             // Selector Tool Button
-            ToolbarIconButton(ImageVector.vectorResource(id = R.drawable.lasso_select_24px), selected = (toolbarExtensionSetting == ToolbarExtensionSetting.SelectorTool)) {
-                if (toolbarExtensionSetting == ToolbarExtensionSetting.SelectorTool) {
-                    toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
-                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.CanvasDrag))
+            ToolbarIconButton(ImageVector.vectorResource(id = R.drawable.lasso_select_24px), selected = (drawInfo.drawMode == DrawMode.Selection)) {
+                if (drawInfo.drawMode == DrawMode.Selection) {
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.CanvasDrag, shape = Shape.Line))
                 } else {
-                    toolbarExtensionSetting = ToolbarExtensionSetting.SelectorTool
-                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Selection))
+                    setDrawInfo(drawInfo.copy(drawMode = DrawMode.Selection, shape = Shape.Line))
+                    toolbarExtensionSetting = ToolbarExtensionSetting.Hidden
                 }
             }
 

@@ -45,12 +45,13 @@ import kotlinx.coroutines.GlobalScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withContext
 import java.io.File
 
 fun makeToast(context: Context, text: String){
-    Looper.prepare()
+    //Looper.prepare()
     Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
-    Looper.loop()
+    //Looper.loop()
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -83,16 +84,21 @@ fun HomePage(page : Pg, setPage: (Pg) -> Unit) {
                     Box(modifier = Modifier.weight(1f)) {
                         OutlinedButton(onClick = {
                             loading = true
-                            GlobalScope.launch(Dispatchers.IO) {
-                            if (client.create()) {
-                                loading = false
-                                offline = false
-                                setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
-                            } else {
-                                loading = false
-                                val text = "Failed to create"
-                                makeToast(context,text)
-                            } }
+                            GlobalScope.launch() {
+                                withContext(Dispatchers.IO) {
+                                    if (client.create()) {
+                                        loading = false
+                                        offline = false
+                                        setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                                    } else {
+                                        loading = false
+                                        val text = "Failed to create"
+                                        withContext(Dispatchers.Main) {
+                                            makeToast(context, text)
+                                        }
+                                    }
+                                }
+                            }
                             },
                             modifier = Modifier
                                 .width(200.dp)
