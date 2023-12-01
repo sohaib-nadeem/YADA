@@ -64,7 +64,8 @@ class MainActivity : ComponentActivity() {
             var page by remember { mutableStateOf(Pg()) }
             CS346ProjectTheme {
                 if (page.curPage == CurrentPage.HomePage) {
-                    HomePage(page, setPage = {page = it})
+                    DynamicUI(page, setPage = {page = it})
+                    //HomePage(page, setPage = {page = it})
                 } else if (page.curPage == CurrentPage.WhiteboardPage) {
                     WhiteboardScreen(page, setPage = {page = it})
                 }

@@ -9,7 +9,7 @@ plugins {
 
 android {
     namespace = "ca.uwaterloo.cs346project"
-    compileSdk = 33
+    compileSdk = 34
 
     defaultConfig {
         applicationId = "ca.uwaterloo.cs346project"
@@ -66,6 +66,7 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("com.google.code.gson:gson:2.8.8")
+    implementation("androidx.compose.foundation:foundation-layout-android:1.5.4")
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.1.5")
     androidTestImplementation("androidx.test.espresso:espresso-core:3.5.1")
@@ -84,4 +85,5 @@ dependencies {
     implementation("io.ktor:ktor-serialization-kotlinx-cbor:$ktor_version")
     implementation("io.ktor:ktor-serialization-kotlinx-protobuf:$ktor_version")
     implementation("io.ktor:ktor-client-logging:$ktor_version")
+    implementation("androidx.constraintlayout:constraintlayout-compose:1.0.0")
 }
