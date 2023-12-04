@@ -1,6 +1,5 @@
 package ca.uwaterloo.cs346project.ui.util
 
-import android.util.Log
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
 import ca.uwaterloo.cs346project.model.Shape
@@ -64,6 +63,7 @@ fun isPointCloseToLine(point: Offset, item: DrawnItem): Boolean {
     if (item.segmentPoints.size < 2) {
         return false
     }
+    val threshold = item.strokeWidth + 50f
 
     val start = item.segmentPoints[0]
     val end = item.segmentPoints[1]
@@ -78,15 +78,21 @@ fun isPointCloseToLine(point: Offset, item: DrawnItem): Boolean {
     val dx = x2 - x1
     val dy = y2 - y1
     val l2 = dx * dx + dy * dy
+    if (l2 == 0f) { // Line is a point
+        // Check if the point is within the threshold distance from the start (which is also the end)
+        val distance = sqrt((start.x - point.x) * (start.x - point.x) + (start.y - point.y) * (start.y - point.y))
+        return distance < threshold
+    }
+
     val t = ((px - x1) * dx + (py - y1) * dy) / l2
     val tt = max(0f, min(1f, t))
     val projX = x1 + tt * dx
     val projY = y1 + tt * dy
     val distance = sqrt((projX - px) * (projX - px) + (projY - py) * (projY - py))
 
-    val threshold = item.strokeWidth + 50f
     return distance < threshold
 }
+
 
 fun linesIntersect(segment1: Pair<Offset, Offset>, segment2: Pair<Offset, Offset>): Boolean {
     fun orientation(p: Offset, q: Offset, r: Offset): Int {
@@ -169,9 +175,9 @@ fun eraseIntersectingItems(eraseLine: DrawnItem?, drawnItems: MutableList<DrawnI
     val erasedItems = mutableListOf<DrawnItem>()
     val remainingItems = mutableListOf<DrawnItem>()
 
-    if (eraseLine != null && eraseLine!!.segmentPoints.size >= 2) {
+    if ((eraseLine != null) && (eraseLine.segmentPoints.size >= 2)) {
         drawnItems.forEach { item ->
-            if (checkIntersection(Pair(eraseLine!!.segmentPoints[eraseLine!!.segmentPoints.size - 2], eraseLine!!.segmentPoints.last()), item)) {
+            if (checkIntersection(Pair(eraseLine.segmentPoints[eraseLine.segmentPoints.size - 2], eraseLine.segmentPoints.last()), item)) {
                 erasedItems.add(item)
             } else {
                 remainingItems.add(item)

@@ -7,19 +7,23 @@ import ca.uwaterloo.cs346project.model.Shape
 import ca.uwaterloo.cs346project.ui.util.DrawnItem
 import ca.uwaterloo.cs346project.ui.util.calculateNewOffset
 import ca.uwaterloo.cs346project.ui.util.checkIntersection
+import ca.uwaterloo.cs346project.ui.util.eraseIntersectingItems
+import ca.uwaterloo.cs346project.ui.util.isPointCloseToLine
+import ca.uwaterloo.cs346project.ui.util.isPointCloseToRectangle
 import ca.uwaterloo.cs346project.ui.util.linesIntersect
 import ca.uwaterloo.cs346project.ui.util.transformAmount
 import ca.uwaterloo.cs346project.ui.util.transformOffset
 import org.junit.Test
 import org.junit.Assert.*
+import org.junit.Before
 
 class GeometryTest {
     // Tests the lineIntercept() helper function
     // The two line segments intersect on the coordinate plane when they share at least one common point
     @Test
     fun testLinesIntersect() {
-        var segment1 = Pair(Offset(0f,0f),Offset(5f,5f))
-        var segment2 = Pair(Offset(5f,5f),Offset(4f,6f))
+        val segment1 = Pair(Offset(0f,0f),Offset(5f,5f))
+        val segment2 = Pair(Offset(5f,5f),Offset(4f,6f))
         assert(linesIntersect(segment1,segment2))
     }
 
@@ -248,6 +252,281 @@ class GeometryTest {
 
         val expected = Offset(1f, 1f) // (100 / 100, 100 / 100)
         assertEquals(expected, result)
+    }
+
+
+
+    // Tests for isPointCloseToRectangle function:
+
+    // Helper function to create a rectangle drawn item
+    private fun createRectangleItem(start: Offset, end: Offset): DrawnItem {
+        return DrawnItem(
+            shape = Shape.Rectangle,
+            segmentPoints = mutableStateListOf(start, end)
+        )
+    }
+
+    @Test
+    fun testPointInsideRectangle() {
+        val item = createRectangleItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToRectangle(Offset(50f, 50f), item))
+    }
+
+    @Test
+    fun testPointOutsideButCloseToRectangle() {
+        val item = createRectangleItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToRectangle(Offset(105f, 105f), item))
+    }
+
+    @Test
+    fun testPointFarFromRectangle() {
+        val item = createRectangleItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertFalse(isPointCloseToRectangle(Offset(201f, 201f), item))
+    }
+
+    @Test
+    fun testPointOnRectangleEdge() {
+        val item = createRectangleItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToRectangle(Offset(0f, 50f), item))
+    }
+
+    @Test
+    fun testPointExactlyAtMarginBoundary() {
+        val item = createRectangleItem(Offset(100f, 100f), Offset(200f, 200f))
+        assertTrue(isPointCloseToRectangle(Offset(0f, 100f), item))
+    }
+
+    @Test
+    fun testPointExactlyAtInnerMarginBoundary() {
+        val item = createRectangleItem(Offset(0f, 0f), Offset(200f, 200f))
+        assertFalse(isPointCloseToRectangle(Offset(100f, 100f), item))
+    }
+
+    @Test
+    fun testNegativePointCoordinates() {
+        val item = createRectangleItem(Offset(-200f, -200f), Offset(-100f, -100f))
+        assertTrue(isPointCloseToRectangle(Offset(-150f, -150f), item))
+    }
+
+    @Test
+    fun testLargeRectangle() {
+        val item = createRectangleItem(Offset(0f, 0f), Offset(5000f, 5000f))
+        assertTrue(isPointCloseToRectangle(Offset(5050f, 5050f), item))
+    }
+
+    @Test
+    fun testRectangleWithZeroSize() {
+        val item = createRectangleItem(Offset(100f, 100f), Offset(100f, 100f))
+        assertTrue(isPointCloseToRectangle(Offset(100f, 100f), item))
+    }
+
+    @Test
+    fun testPointCloseToCornerInsideMargin() {
+        val item = createRectangleItem(Offset(100f, 100f), Offset(200f, 200f))
+        assertTrue(isPointCloseToRectangle(Offset(90f, 90f), item))
+    }
+
+    @Test
+    fun testOvalShape() {
+        val item = DrawnItem(
+            shape = Shape.Oval,
+            segmentPoints = mutableStateListOf(Offset(100f, 100f), Offset(200f, 200f))
+        )
+        assertTrue(isPointCloseToRectangle(Offset(150f, 150f), item))
+    }
+
+    @Test
+    fun testNonRectangleOvalShapes() {
+        val item = DrawnItem(
+            shape = Shape.Line, // Non-rectangle shape
+            segmentPoints = mutableStateListOf(Offset(100f, 100f), Offset(200f, 200f))
+        )
+        assertFalse(isPointCloseToRectangle(Offset(150f, 150f), item))
+    }
+
+    @Test
+    fun testRectangleEdgesAtMargin() {
+        val item = createRectangleItem(Offset(100f, 100f), Offset(200f, 200f))
+        assertTrue(isPointCloseToRectangle(Offset(300f, 300f), item))
+    }
+
+    @Test
+    fun testPointsOnTheAxis() {
+        val item = createRectangleItem(Offset(100f, 100f), Offset(200f, 200f))
+        assertTrue(isPointCloseToRectangle(Offset(100f, 0f), item))
+        assertTrue(isPointCloseToRectangle(Offset(0f, 100f), item))
+    }
+
+
+    // Tests for isPointCloseToLine function:
+
+    // Helper function to create a straight line drawn item
+    private fun createStraightLineItem(start: Offset, end: Offset): DrawnItem {
+        return DrawnItem(
+            shape = Shape.StraightLine,
+            segmentPoints = mutableStateListOf(start, end),
+            strokeWidth = 4f  // Example stroke width, adjust as needed
+        )
+    }
+
+    @Test
+    fun testPointExactlyOnTheLine() {
+        val item = createStraightLineItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(50f, 50f), item))
+    }
+
+    @Test
+    fun testPointWithinThresholdDistance() {
+        val item = createStraightLineItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(50f, 55f), item))  // Slightly above the line
+    }
+
+    @Test
+    fun testPointOutsideThresholdDistance() {
+        val item = createStraightLineItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertFalse(isPointCloseToLine(Offset(50f, 160f), item))  // Far above the line
+    }
+
+    @Test
+    fun testPointCloseToLineStart() {
+        val item = createStraightLineItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(5f, 5f), item))  // Close to start
+    }
+
+    @Test
+    fun testPointCloseToLineEnd() {
+        val item = createStraightLineItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(95f, 95f), item))  // Close to end
+    }
+
+    @Test
+    fun testPointBeyondLineStart() {
+        val item = createStraightLineItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(-5f, -5f), item))  // Just before the line starts
+    }
+
+    @Test
+    fun testPointBeyondLineEnd() {
+        val item = createStraightLineItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(105f, 105f), item))  // Just beyond the line ends
+    }
+
+    @Test
+    fun testPointPerpendicularToLineMiddle() {
+        val item = createStraightLineItem(Offset(0f, 0f), Offset(100f, 0f))
+        assertTrue(isPointCloseToLine(Offset(50f, 10f), item))  // Perpendicular to the middle
+    }
+
+    @Test
+    fun testHorizontalLine() {
+        val item = createStraightLineItem(Offset(0f, 100f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(50f, 105f), item))  // Close to a horizontal line
+    }
+
+    @Test
+    fun testVerticalLine() {
+        val item = createStraightLineItem(Offset(100f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(105f, 50f), item))  // Close to a vertical line
+    }
+
+    @Test
+    fun testDiagonalLine() {
+        val item = createStraightLineItem(Offset(0f, 0f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(75f, 75f), item))  // On a diagonal line
+    }
+
+    @Test
+    fun testZeroLengthLine() {
+        val item = createStraightLineItem(Offset(100f, 100f), Offset(100f, 100f))
+        assertTrue(isPointCloseToLine(Offset(100f, 100f), item))  // Point on a zero-length line
+    }
+
+    @Test
+    fun testNegativeCoordinates() {
+        val item = createStraightLineItem(Offset(-100f, -100f), Offset(-200f, -200f))
+        assertTrue(isPointCloseToLine(Offset(-150f, -150f), item))  // Point with negative coordinates
+    }
+
+
+    // Tests for eraseIntersectingItems function
+
+    private lateinit var drawnItems: MutableList<DrawnItem>
+
+    @Before
+    fun setUp() {
+        drawnItems = mutableListOf()
+    }
+
+    // Helper method to create a DrawnItem with specific points
+    private fun createDrawnItemWithPoints(segmentPoints: List<Offset>): DrawnItem {
+        // Assuming DrawnItem takes a list of Offset points in its constructor
+        return DrawnItem(userObjectId = Pair(1, 1), // Example ID
+            shape = Shape.Line, // Assuming it's a line
+            segmentPoints = mutableStateListOf(*segmentPoints.toTypedArray()))
+    }
+
+    @Test
+    fun testEraseLineIsNull() {
+        val eraseLine: DrawnItem? = null
+        val erasedItems = eraseIntersectingItems(eraseLine, drawnItems)
+        assertTrue(erasedItems.isEmpty())
+    }
+
+    @Test
+    fun testEraseLineHasLessThanTwoPoints() {
+        val eraseLine = createDrawnItemWithPoints(listOf(Offset(0f, 0f)))
+        val erasedItems = eraseIntersectingItems(eraseLine, drawnItems)
+        assertTrue(erasedItems.isEmpty())
+    }
+
+    @Test
+    fun testNoIntersection() {
+        val eraseLine = createDrawnItemWithPoints(listOf(Offset(0f, 0f), Offset(10f, 10f)))
+        drawnItems.add(createDrawnItemWithPoints(listOf(Offset(20f, 20f), Offset(30f, 30f))))
+        val erasedItems = eraseIntersectingItems(eraseLine, drawnItems)
+        assertTrue(erasedItems.isEmpty())
+    }
+
+    @Test
+    fun testSingleIntersection() {
+        val eraseLine = createDrawnItemWithPoints(listOf(Offset(0f, 0f), Offset(10f, 10f)))
+        val intersectingItem = createDrawnItemWithPoints(listOf(Offset(5f, 5f), Offset(15f, 15f)))
+        drawnItems.add(intersectingItem)
+        val erasedItems = eraseIntersectingItems(eraseLine, drawnItems)
+        assertEquals(1, erasedItems.size)
+        assertTrue(intersectingItem in erasedItems)
+    }
+
+    @Test
+    fun testMultipleIntersections() {
+        val eraseLine = createDrawnItemWithPoints(listOf(Offset(0f, 0f), Offset(10f, 10f)))
+        val intersectingItem1 = createDrawnItemWithPoints(listOf(Offset(5f, 5f), Offset(15f, 15f)))
+        val intersectingItem2 = createDrawnItemWithPoints(listOf(Offset(3f, 3f), Offset(7f, 7f)))
+        val nonIntersectingItem = createDrawnItemWithPoints(listOf(Offset(20f, 20f), Offset(30f, 30f)))
+
+        drawnItems.addAll(listOf(intersectingItem1, intersectingItem2, nonIntersectingItem))
+        val erasedItems = eraseIntersectingItems(eraseLine, drawnItems)
+
+        assertEquals(2, erasedItems.size)
+        assertTrue(erasedItems.containsAll(listOf(intersectingItem1, intersectingItem2)))
+        assertFalse(erasedItems.contains(nonIntersectingItem))
+        assertFalse(drawnItems.containsAll(listOf(intersectingItem1, intersectingItem2)))
+        assertTrue(drawnItems.contains(nonIntersectingItem))
+    }
+
+
+    @Test
+    fun testAllItemsIntersect() {
+        val eraseLine = createDrawnItemWithPoints(listOf(Offset(0f, 0f), Offset(10f, 10f)))
+        val intersectingItem1 = createDrawnItemWithPoints(listOf(Offset(5f, 5f), Offset(15f, 15f)))
+        val intersectingItem2 = createDrawnItemWithPoints(listOf(Offset(2f, 2f), Offset(8f, 8f)))
+
+        drawnItems.addAll(listOf(intersectingItem1, intersectingItem2))
+        val erasedItems = eraseIntersectingItems(eraseLine, drawnItems)
+
+        assertEquals(2, erasedItems.size)
+        assertTrue(erasedItems.containsAll(listOf(intersectingItem1, intersectingItem2)))
+        assertTrue(drawnItems.isEmpty())
     }
 
 }
