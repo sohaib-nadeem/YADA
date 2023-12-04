@@ -172,7 +172,6 @@ fun checkIntersection(line: Pair<Offset, Offset>, item: DrawnItem): Boolean {
     if (item.shape == Shape.Line || item.shape == Shape.StraightLine) {
         for (i in 1 until item.segmentPoints.size) {
             if (linesIntersect(line, Pair(item.segmentPoints[i - 1], item.segmentPoints[i]))) {
-                Log.d("Intersection", "Intersection detected between lines.")
                 return true
             }
         }
@@ -193,7 +192,6 @@ fun checkIntersection(line: Pair<Offset, Offset>, item: DrawnItem): Boolean {
 
         rectangleEdges.forEach { edge ->
             if (linesIntersect(line, edge)) {
-                Log.d("Intersection", "Intersection detected between line and rectangle.")
                 return true
             }
         }
