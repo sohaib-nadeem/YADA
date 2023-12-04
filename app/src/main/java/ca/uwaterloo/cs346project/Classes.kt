@@ -105,6 +105,7 @@ fun isPointCloseToLine(point: Offset, item: DrawnItem): Boolean {
     if (item.segmentPoints.size < 2) {
         return false
     }
+    val threshold = item.strokeWidth + 50f
 
     val start = item.segmentPoints[0]
     val end = item.segmentPoints[1]
@@ -119,12 +120,17 @@ fun isPointCloseToLine(point: Offset, item: DrawnItem): Boolean {
     val dx = x2 - x1
     val dy = y2 - y1
     val l2 = dx * dx + dy * dy
+    if (l2 == 0f) { // Line is a point
+        // Check if the point is within the threshold distance from the start (which is also the end)
+        val distance = sqrt((start.x - point.x) * (start.x - point.x) + (start.y - point.y) * (start.y - point.y))
+        return distance < threshold
+    }
+
     val t = ((px - x1) * dx + (py - y1) * dy) / l2
     val tt = max(0f, min(1f, t))
     val projX = x1 + tt * dx
     val projY = y1 + tt * dy
     val distance = sqrt((projX - px) * (projX - px) + (projY - py) * (projY - py))
 
-    val threshold = item.strokeWidth + 50f
     return distance < threshold
 }

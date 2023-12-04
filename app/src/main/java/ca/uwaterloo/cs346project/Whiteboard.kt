@@ -3,7 +3,6 @@ package ca.uwaterloo.cs346project
 import android.graphics.Canvas
 import android.graphics.pdf.PdfDocument
 import android.os.Environment
-import android.util.Log
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures

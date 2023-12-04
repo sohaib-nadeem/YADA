@@ -56,12 +56,13 @@ fun applyAction(action: Action<DrawnItem>, drawnItems: MutableList<DrawnItem>) {
         }
         ActionType.MODIFY -> {
             if (action.items.size != 2) {
-                Log.d("performRedo", "ERROR: 'items' field does have 2 DrawnItem")
                 throw IllegalArgumentException("ERROR: 'items' field does have 2 DrawnItem")
             } else {
                 val index = drawnItems.indexOfFirst { it.userObjectId == action.items[0].userObjectId }
                 if (index != -1) {
                     drawnItems[index] = action.items[1]
+                } else {
+                    throw NoSuchElementException("No element with the specified userObjectId found")
                 }
             }
         }
@@ -78,7 +79,6 @@ fun createReversedAction(action: Action<DrawnItem>): Action<DrawnItem> {
         }
         ActionType.MODIFY -> {
             if (action.items.size != 2) {
-                Log.d("createReversedAction", "ERROR: 'items' field does have 2 DrawnItem")
                 throw IllegalArgumentException("ERROR: 'items' field does have 2 DrawnItem")
             } else {
                 return Action(ActionType.MODIFY, listOf(action.items[1], action.items[0]))
@@ -89,7 +89,6 @@ fun createReversedAction(action: Action<DrawnItem>): Action<DrawnItem> {
 
 
 fun performUndo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action<DrawnItem>>, redoStack: MutableList<Action<DrawnItem>>) {
-    Log.d("performUndo", "performUndo Triggered")
     undoStack.removeLastOrNull()?.let { lastAction ->
         applyAction(createReversedAction(lastAction), drawnItems)
         // Move the action to redoStack
@@ -99,7 +98,6 @@ fun performUndo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Actio
 
 
 fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action<DrawnItem>>, redoStack: MutableList<Action<DrawnItem>>) {
-    Log.d("performRedo", "performRedo Triggered")
     redoStack.removeLastOrNull()?.let { lastAction ->
         applyAction(lastAction, drawnItems)
         // Move the action back to undoStack
