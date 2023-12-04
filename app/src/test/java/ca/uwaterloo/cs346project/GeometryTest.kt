@@ -3,10 +3,17 @@ package ca.uwaterloo.cs346project
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.unit.IntSize
+import ca.uwaterloo.cs346project.model.Shape
+import ca.uwaterloo.cs346project.ui.util.DrawnItem
+import ca.uwaterloo.cs346project.ui.util.calculateNewOffset
+import ca.uwaterloo.cs346project.ui.util.checkIntersection
+import ca.uwaterloo.cs346project.ui.util.linesIntersect
+import ca.uwaterloo.cs346project.ui.util.transformAmount
+import ca.uwaterloo.cs346project.ui.util.transformOffset
 import org.junit.Test
 import org.junit.Assert.*
 
-class WhiteboardTest {
+class GeometryTest {
     // Tests the lineIntercept() helper function
     // The two line segments intersect on the coordinate plane when they share at least one common point
     @Test
@@ -215,7 +222,7 @@ class WhiteboardTest {
         val zoom = 2f
         val amountToTransform = Offset(100f, 100f)
 
-        val result = transformAmount(zoom, Offset(0f, 0f), amountToTransform)
+        val result = transformAmount(zoom, amountToTransform)
 
         val expected = Offset(50f, 50f) // (100 / 2, 100 / 2)
         assertEquals(expected, result)
@@ -226,7 +233,7 @@ class WhiteboardTest {
         val zoom = 1f // Edge case: Zoom level exactly 1
         val amountToTransform = Offset(100f, 100f)
 
-        val result = transformAmount(zoom, Offset(0f, 0f), amountToTransform)
+        val result = transformAmount(zoom, amountToTransform)
 
         val expected = Offset(100f, 100f) // (100 / 1, 100 / 1)
         assertEquals(expected, result)
@@ -237,7 +244,7 @@ class WhiteboardTest {
         val zoom = 100f // Edge case: Very high zoom level
         val amountToTransform = Offset(100f, 100f)
 
-        val result = transformAmount(zoom, Offset(0f, 0f), amountToTransform)
+        val result = transformAmount(zoom, amountToTransform)
 
         val expected = Offset(1f, 1f) // (100 / 100, 100 / 100)
         assertEquals(expected, result)

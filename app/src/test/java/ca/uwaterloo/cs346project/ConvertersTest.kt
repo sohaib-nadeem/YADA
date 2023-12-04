@@ -3,11 +3,16 @@ package ca.uwaterloo.cs346project
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import ca.uwaterloo.cs346project.data.toCanvasObject
+import ca.uwaterloo.cs346project.data.toDrawnItem
+import ca.uwaterloo.cs346project.model.CanvasObject
+import ca.uwaterloo.cs346project.model.Shape
+import ca.uwaterloo.cs346project.ui.util.DrawnItem
 import junit.framework.TestCase.assertEquals
 import junit.framework.TestCase.assertTrue
 import org.junit.Test
 
-class ClientTest {
+class ConvertersTest {
     @Test
     fun testToCanvasObject() {
         val drawnItem = DrawnItem(
