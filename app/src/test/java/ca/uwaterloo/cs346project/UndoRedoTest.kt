@@ -3,10 +3,18 @@ package ca.uwaterloo.cs346project
 import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
+import ca.uwaterloo.cs346project.model.Action
+import ca.uwaterloo.cs346project.model.ActionType
+import ca.uwaterloo.cs346project.model.Shape
+import ca.uwaterloo.cs346project.ui.util.DrawnItem
+import ca.uwaterloo.cs346project.ui.util.applyAction
+import ca.uwaterloo.cs346project.ui.util.createReversedAction
+import ca.uwaterloo.cs346project.ui.util.performRedo
+import ca.uwaterloo.cs346project.ui.util.performUndo
 import org.junit.Test
 import org.junit.Before
 import org.junit.Assert.*
-class UpperBarTest {
+class UndoRedoTest {
     private lateinit var drawnItems: MutableList<DrawnItem>
     private lateinit var undoStack: MutableList<Action<DrawnItem>>
     private lateinit var redoStack: MutableList<Action<DrawnItem>>

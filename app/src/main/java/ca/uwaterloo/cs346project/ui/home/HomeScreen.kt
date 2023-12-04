@@ -1,17 +1,14 @@
-package ca.uwaterloo.cs346project
+package ca.uwaterloo.cs346project.ui.home
 
 import android.content.Context
 import android.content.res.Configuration
-import android.os.Looper
 import android.widget.Toast
 import androidx.constraintlayout.compose.ConstraintLayout
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
@@ -29,65 +26,53 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextField
 import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
-import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.drawWithContent
-import androidx.compose.ui.graphics.BlendMode
-import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.min
 import androidx.compose.ui.unit.sp
 import androidx.constraintlayout.compose.Dimension
-import com.google.gson.reflect.TypeToken
+import ca.uwaterloo.cs346project.client
+import ca.uwaterloo.cs346project.ui.util.PageType
+import ca.uwaterloo.cs346project.offline
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.GlobalScope
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.withContext
-import java.io.File
 
 fun makeToast(context: Context, text: String){
     Toast.makeText(context, text, Toast.LENGTH_SHORT).show()
 }
 
 @Composable
-fun DynamicUI(page: Pg, setPage: (Pg) -> Unit) {
+fun DynamicUI(setPage: (PageType) -> Unit) {
     val configuration = LocalConfiguration.current
     val orientation = configuration.orientation
 
     if (orientation == Configuration.ORIENTATION_PORTRAIT) {
         // Call a composable function that sets up the UI for portrait mode
         //LandscapeUI(page, setPage)
-        PortraitUI(page, setPage)
+        PortraitUI(setPage)
     } else {
         // Call a composable function that sets up the UI for landscape mode
-        LandscapeUI(page, setPage)
+        LandscapeUI(setPage)
     }
 }
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun PortraitUI(page: Pg, setPage: (Pg) -> Unit) {
+fun PortraitUI(setPage: (PageType) -> Unit) {
     var joinSessionID by remember { mutableStateOf("") }
     val context = LocalContext.current
     var loading by remember { mutableStateOf(false) }
@@ -133,7 +118,7 @@ fun PortraitUI(page: Pg, setPage: (Pg) -> Unit) {
             ) {
                 Button(
                     onClick = {
-                        setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                        setPage(PageType.WhiteboardPage)
                         offline = true
                     },
                     modifier = Modifier
@@ -151,7 +136,7 @@ fun PortraitUI(page: Pg, setPage: (Pg) -> Unit) {
                                 if (client.create()) {
                                     loading = false
                                     offline = false
-                                    setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                                    setPage(PageType.WhiteboardPage)
                                 } else {
                                     loading = false
                                     val text = "Failed to create"
@@ -177,7 +162,7 @@ fun PortraitUI(page: Pg, setPage: (Pg) -> Unit) {
                                 if (client.join(client.session_id.toString())) {
                                     loading = false
                                     offline = false
-                                    setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                                    setPage(PageType.WhiteboardPage)
                                 } else {
                                     loading = false
                                     val text = "Failed to open previous canvas"
@@ -228,7 +213,7 @@ fun PortraitUI(page: Pg, setPage: (Pg) -> Unit) {
                                     if (client.join(joinSessionID)) {
                                         loading = false
                                         offline = false
-                                        setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                                        setPage(PageType.WhiteboardPage)
                                     } else {
                                         loading = false
                                         val text = "Invalid Session ID"
@@ -259,7 +244,7 @@ fun PortraitUI(page: Pg, setPage: (Pg) -> Unit) {
 }
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun LandscapeUI(page: Pg, setPage: (Pg) -> Unit) {
+fun LandscapeUI(setPage: (PageType) -> Unit) {
     var joinSessionID by remember { mutableStateOf("") }
     val context = LocalContext.current
     var loading by remember { mutableStateOf(false) }
@@ -293,7 +278,7 @@ fun LandscapeUI(page: Pg, setPage: (Pg) -> Unit) {
 
             Button(
                 onClick = {
-                    setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                    setPage(PageType.WhiteboardPage)
                     offline = true
                 },
                 modifier = Modifier
@@ -311,7 +296,7 @@ fun LandscapeUI(page: Pg, setPage: (Pg) -> Unit) {
                             if (client.create()) {
                                 loading = false
                                 offline = false
-                                setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                                setPage(PageType.WhiteboardPage)
                             } else {
                                 loading = false
                                 val text = "Failed to create"
@@ -338,7 +323,7 @@ fun LandscapeUI(page: Pg, setPage: (Pg) -> Unit) {
                             if (client.join(client.session_id.toString())) {
                                 loading = false
                                 offline = false
-                                setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                                setPage(PageType.WhiteboardPage)
                             } else {
                                 loading = false
                                 val text = "Failed to open previous canvas"
@@ -390,7 +375,7 @@ fun LandscapeUI(page: Pg, setPage: (Pg) -> Unit) {
                                 if (client.join(joinSessionID)) {
                                     loading = false
                                     offline = false
-                                    setPage(page.copy(curPage = CurrentPage.WhiteboardPage))
+                                    setPage(PageType.WhiteboardPage)
                                 } else {
                                     loading = false
                                     val text = "Invalid Session ID"

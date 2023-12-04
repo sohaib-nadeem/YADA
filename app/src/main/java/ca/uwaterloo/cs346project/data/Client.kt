@@ -1,7 +1,8 @@
-package ca.uwaterloo.cs346project
-import androidx.compose.runtime.toMutableStateList
-import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.graphics.Color
+package ca.uwaterloo.cs346project.data
+
+import ca.uwaterloo.cs346project.model.Action
+import ca.uwaterloo.cs346project.model.CanvasObject
+import ca.uwaterloo.cs346project.ui.util.DrawnItem
 import io.ktor.client.*
 import io.ktor.client.request.*
 import io.ktor.http.ContentType
@@ -10,43 +11,13 @@ import io.ktor.client.call.*
 import io.ktor.client.engine.cio.*
 import io.ktor.client.plugins.contentnegotiation.*
 import io.ktor.serialization.kotlinx.json.*
-import kotlinx.serialization.*
 import kotlinx.serialization.json.*
 
-@Serializable
-data class CanvasObject(
-    val userObjectId: Pair<Int, Int>,
-    val shape: Shape = Shape.Line,
-    val color: ULong = 0UL,
-    val strokeWidth: Float = 4f,
-    val segmentPoints : List<Offset> = listOf()
-) {
-    @Serializable
-    data class Offset (val x: Float, val y: Float)
-
-}
-fun toCanvasObject(item: DrawnItem): CanvasObject {
-    return CanvasObject(item.userObjectId, item.shape,item.color.value,item.strokeWidth, segmentPoints = item.segmentPoints.toList().map{
-        CanvasObject.Offset(it.x, it.y)
-    })
-}
-
-fun toDrawnItem(canvasobject: CanvasObject): DrawnItem {
-
-    return DrawnItem(
-        canvasobject.userObjectId,
-        canvasobject.shape,
-        Color(canvasobject.color),
-        canvasobject.strokeWidth,
-        canvasobject.segmentPoints.map {
-            Offset(it.x,it.y)
-        }.toMutableStateList())
-}
-
 class Client {
-    val server_ip = "172.20.10.2"
+    val server_ip = "34.124.118.88"
     var session_id = -1
     var user_id = -1
+
     private val client = HttpClient(CIO) {
         install(ContentNegotiation) {
             json(Json {

@@ -1,8 +1,5 @@
-package ca.uwaterloo.cs346project
+package ca.uwaterloo.cs346project.ui.whiteboard
 
-import android.graphics.Canvas
-import android.graphics.pdf.PdfDocument
-import android.os.Environment
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectDragGestures
@@ -19,185 +16,34 @@ import androidx.compose.runtime.snapshots.SnapshotStateList
 import androidx.compose.runtime.toMutableStateList
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
-import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.ImageBitmap
-import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.TransformOrigin
-import androidx.compose.ui.graphics.asAndroidBitmap
-import androidx.compose.ui.graphics.drawscope.DrawScope
-import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import dev.shreyaspatil.capturable.Capturable
+import ca.uwaterloo.cs346project.client
+import ca.uwaterloo.cs346project.model.Action
+import ca.uwaterloo.cs346project.model.ActionType
+import ca.uwaterloo.cs346project.model.Shape
+import ca.uwaterloo.cs346project.ui.util.detectTransformGesturesCustom
+import ca.uwaterloo.cs346project.ui.util.isPointCloseToLine
+import ca.uwaterloo.cs346project.ui.util.isPointCloseToRectangle
+import ca.uwaterloo.cs346project.offline
+import ca.uwaterloo.cs346project.ui.util.DrawInfo
+import ca.uwaterloo.cs346project.ui.util.DrawMode
+import ca.uwaterloo.cs346project.ui.util.DrawnItem
+import ca.uwaterloo.cs346project.ui.util.calculateNewOffset
+import ca.uwaterloo.cs346project.ui.util.drawItem
+import ca.uwaterloo.cs346project.ui.util.drawShapeCorners
+import ca.uwaterloo.cs346project.ui.util.eraseIntersectingItems
+import ca.uwaterloo.cs346project.ui.util.transformAmount
+import ca.uwaterloo.cs346project.ui.util.transformOffset
 import dev.shreyaspatil.capturable.controller.CaptureController
 import kotlinx.coroutines.launch
-import java.io.File
-import java.io.FileOutputStream
-import java.io.IOException
-import java.text.SimpleDateFormat
-import java.util.Date
-
-fun Offset.calculateNewOffset(
-    centroid: Offset,
-    pan: Offset,
-    zoom: Float,
-    gestureZoom: Float,
-    size: IntSize
-): Offset {
-    val newScale = maxOf(1f, zoom * gestureZoom)
-    val newOffset = (this + centroid / zoom) -
-            (centroid / newScale + pan / zoom)
-    return Offset(
-        newOffset.x.coerceIn(0f, (size.width / zoom) * (zoom - 1f)),
-        newOffset.y.coerceIn(0f, (size.height / zoom) * (zoom - 1f))
-    )
-}
-
-fun transformOffset(zoom: Float, offset: Offset, offsetToTransform: Offset): Offset {
-    return Offset(offsetToTransform.x / zoom + offset.x, offsetToTransform.y / zoom + offset.y)
-}
-
-fun transformAmount(zoom: Float, offset: Offset, amountToTransform: Offset): Offset {
-    return Offset(amountToTransform.x / zoom, amountToTransform.y / zoom)
-}
-
-// Helper function to draw a given DrawnItem
-fun DrawScope.drawItem(item: DrawnItem) {
-    // Create a new item with translated points
-    val translatedItem = item.copy(
-        segmentPoints = item.segmentPoints.map { point ->
-            Offset(
-                x = point.x,
-                y = point.y
-            )
-        }.toMutableStateList()
-    )
-
-    when (translatedItem.shape) {
-        Shape.Line, Shape.StraightLine -> {
-            for (i in 1 until translatedItem.segmentPoints.size) {
-                drawLine(
-                    color = translatedItem.color,
-                    start = translatedItem.segmentPoints[i - 1],
-                    end = translatedItem.segmentPoints[i],
-                    strokeWidth = translatedItem.strokeWidth,
-                    cap = StrokeCap.Round
-                )
-            }
-        }
-        Shape.Rectangle -> {
-            val start = translatedItem.segmentPoints[0]
-            val end = translatedItem.segmentPoints[1]
-            drawRect(
-                color = translatedItem.color,
-                topLeft = start,
-                size = Size(
-                    width = end.x - start.x,
-                    height = end.y - start.y
-                ),
-                style = Stroke(width = translatedItem.strokeWidth)
-            )
-        }
-        Shape.Oval -> {
-            val start = translatedItem.segmentPoints[0]
-            val end = translatedItem.segmentPoints[1]
-            drawOval(
-                color = translatedItem.color,
-                topLeft = start,
-                size = Size(
-                    width = end.x - start.x,
-                    height = end.y - start.y
-                ),
-                style = Stroke(width = translatedItem.strokeWidth)
-            )
-        }
-        // Add other shapes as needed
-    }
-}
-
-
-fun linesIntersect(segment1: Pair<Offset, Offset>, segment2: Pair<Offset, Offset>): Boolean {
-    fun orientation(p: Offset, q: Offset, r: Offset): Int {
-        val value = (q.y - p.y) * (r.x - q.x) - (q.x - p.x) * (r.y - q.y)
-        return when {
-            value.toDouble() == 0.0 -> 0  // collinear
-            value > 0 -> 1  // clockwise
-            else -> 2  // counterclockwise
-        }
-    }
-
-    fun onSegment(p: Offset, q: Offset, r: Offset): Boolean {
-        return q.x <= maxOf(p.x, r.x) && q.x >= minOf(p.x, r.x) &&
-                q.y <= maxOf(p.y, r.y) && q.y >= minOf(p.y, r.y)
-    }
-
-    val (p1, q1) = segment1
-    val (p2, q2) = segment2
-
-    // Find the four orientations needed for general and special cases
-    val o1 = orientation(p1, q1, p2)
-    val o2 = orientation(p1, q1, q2)
-    val o3 = orientation(p2, q2, p1)
-    val o4 = orientation(p2, q2, q1)
-
-    // General case
-    if (o1 != o2 && o3 != o4) return true
-
-    // Special Cases
-    // p1, q1 and p2 are collinear and p2 lies on segment p1q1
-    if (o1 == 0 && onSegment(p1, p2, q1)) return true
-
-    // p1, q1 and p2 are collinear and q2 lies on segment p1q1
-    if (o2 == 0 && onSegment(p1, q2, q1)) return true
-
-    // p2, q2 and p1 are collinear and p1 lies on segment p2q2
-    if (o3 == 0 && onSegment(p2, p1, q2)) return true
-
-    // p2, q2 and q1 are collinear and q1 lies on segment p2q2
-    if (o4 == 0 && onSegment(p2, q1, q2)) return true
-
-    // Doesn't fall in any of the above cases
-    return false
-}
-
-
-fun checkIntersection(line: Pair<Offset, Offset>, item: DrawnItem): Boolean {
-    // If item2 is a line or straight line, check intersection between each pair of consecutive points
-    if (item.shape == Shape.Line || item.shape == Shape.StraightLine) {
-        for (i in 1 until item.segmentPoints.size) {
-            if (linesIntersect(line, Pair(item.segmentPoints[i - 1], item.segmentPoints[i]))) {
-                return true
-            }
-        }
-    }
-    // If item is a rectangle, calculate its edges and check intersection
-    else if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
-        val topLeft = item.segmentPoints[0]
-        val bottomRight = item.segmentPoints[1]
-        val topRight = Offset(bottomRight.x, topLeft.y)
-        val bottomLeft = Offset(topLeft.x, bottomRight.y)
-
-        val rectangleEdges = listOf(
-            Pair(topLeft, topRight),
-            Pair(topRight, bottomRight),
-            Pair(bottomRight, bottomLeft),
-            Pair(bottomLeft, topLeft)
-        )
-
-        rectangleEdges.forEach { edge ->
-            if (linesIntersect(line, edge)) {
-                return true
-            }
-        }
-    }
-    return false
-}
-
 
 
 @Composable
@@ -222,81 +68,12 @@ fun Whiteboard(
     var zoom by remember { mutableStateOf(1f) }
     var offset by remember { mutableStateOf(Offset.Zero) }
 
-    val density = LocalDensity.current;
-    val configuration = LocalConfiguration.current;
-    var screenWidthPx = with(density) {configuration.screenWidthDp.dp.roundToPx()}
-    var screenHeightPx = with(density) {configuration.screenHeightDp.dp.roundToPx()}
+    val density = LocalDensity.current
+    val configuration = LocalConfiguration.current
+    val screenWidthPx = with(density) {configuration.screenWidthDp.dp.roundToPx()}
+    val screenHeightPx = with(density) {configuration.screenHeightDp.dp.roundToPx()}
 
-
-    fun eraseIntersectingItems() {
-        val erasedItems = mutableListOf<DrawnItem>()
-        val remainingItems = mutableListOf<DrawnItem>()
-
-        if (tempItem != null && tempItem!!.segmentPoints.size >= 2) {
-            drawnItems.forEach { item ->
-                if (checkIntersection(Pair(tempItem!!.segmentPoints[tempItem!!.segmentPoints.size - 2], tempItem!!.segmentPoints.last()), item)) {
-                    erasedItems.add(item)
-                } else {
-                    remainingItems.add(item)
-                }
-            }
-            drawnItems.clear()
-            drawnItems.addAll(remainingItems)
-        }
-
-        if (erasedItems.isNotEmpty()) {
-            if (tempAction == null) {
-                tempAction = Action<DrawnItem>(
-                    type =  ActionType.REMOVE,
-                    items = emptyList()
-                )
-            }
-            tempAction = tempAction!!.copy(
-                items = tempAction!!.items + erasedItems
-            )
-        }
-    }
-
-    Capturable(
-        controller = captureController,
-        onCaptured = { bitmap, error ->
-            // This is captured bitmap
-            if (bitmap != null) {
-                // Bitmap is captured successfully.
-                println("Bitmap successful")
-                val pdfDocument = PdfDocument()
-                val pageInfo = PdfDocument.PageInfo.Builder(bitmap.width, bitmap.height, 1).create()
-                val page = pdfDocument.startPage(pageInfo)
-                val canvas : Canvas = page.canvas
-                canvas.drawBitmap(bitmap.asAndroidBitmap(), 0f, 0f, null)
-                pdfDocument.finishPage(page)
-
-                try {
-                    val timestamp = System.currentTimeMillis()
-                    val sdf = SimpleDateFormat("yyyy-MM-dd-HH-mm-ss")
-                    val date = Date(timestamp)
-                    val formattedDate = sdf.format(date)
-                    val filename = "Canvas$formattedDate.pdf"
-                    val pdfFile = File(Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS), filename)
-                    pdfDocument.writeTo(FileOutputStream(pdfFile))
-                    // Handle success - the PDF is saved
-                    println("save successful")
-                } catch (e: IOException) {
-                    // Handle the error
-                    println("exception")
-                    println(e)
-                } finally {
-                    pdfDocument.close()
-                }
-
-            }
-
-            if (error != null) {
-                // Error occurred.
-                println("abc")
-            }
-        }
-    ) {
+    ExportCapturable(captureController) {
         Canvas(modifier = Modifier
             .fillMaxSize()
             .background(canvasColor) // Default: White
@@ -374,7 +151,7 @@ fun Whiteboard(
                     },
 
                     onDrag = { change, amount ->
-                        val transformedAmount = transformAmount(zoom, offset, amount)
+                        val transformedAmount = transformAmount(zoom, amount)
                         if (cachedDrawInfo.drawMode == DrawMode.Selection) {
                             if (selectedItemIndex != -1) {
                                 val item = drawnItems[selectedItemIndex]
@@ -415,7 +192,20 @@ fun Whiteboard(
                                 if (tempItem != null) {
                                     tempItem!!.segmentPoints.add(tempOffset)
                                     if (cachedDrawInfo.drawMode == DrawMode.Eraser) {
-                                        eraseIntersectingItems()
+                                        val erasedItems = eraseIntersectingItems(tempItem, drawnItems)
+
+                                        // add the additional erased objects added to the items field of the tempAction
+                                        if (erasedItems.isNotEmpty()) {
+                                            if (tempAction == null) {
+                                                tempAction = Action<DrawnItem>(
+                                                    type =  ActionType.REMOVE,
+                                                    items = emptyList()
+                                                )
+                                            }
+                                            tempAction = tempAction!!.copy(
+                                                items = tempAction!!.items + erasedItems
+                                            )
+                                        }
                                     }
                                 }
                             } else if (cachedDrawInfo.drawMode == DrawMode.Shape) {
@@ -454,9 +244,6 @@ fun Whiteboard(
 
                             tempAction = null
                         }
-
-//                    undoStack.add(drawnItems.toList())
-//                    redoStack.clear()
                     }
                 )
             }
@@ -483,7 +270,6 @@ fun Whiteboard(
                 drawImage(
                     image = selectedImage,
                     dstSize = IntSize(screenWidthPx,screenHeightPx)
-
                 )
             }
 
@@ -500,50 +286,7 @@ fun Whiteboard(
             if (cachedDrawInfo.drawMode == DrawMode.Selection && selectedItemIndex != -1) {
                 if (selectedItemIndex < drawnItems.size) {
                     val item = drawnItems[selectedItemIndex]
-                    if (item.shape == Shape.Rectangle || item.shape == Shape.Oval) {
-                        val cornerSize = 40f
-                        // Assuming the first and last points are the corners of the rectangle/oval
-                        val start = item.segmentPoints.first()
-                        val end = item.segmentPoints.last()
-                        val corners = listOf(
-                            start,
-                            Offset(end.x, start.y),
-                            Offset(start.x, end.y),
-                            end
-                        )
-
-                        corners.forEach { corner ->
-                            drawRect(
-                                color = Color.Red,
-                                topLeft = Offset(
-                                    corner.x - cornerSize / 2,
-                                    corner.y - cornerSize / 2
-                                ),
-                                size = Size(cornerSize, cornerSize),
-                                style = Stroke(width = 5f)
-                            )
-                        }
-                        if (item.shape == Shape.Oval) {
-                            drawRect(
-                                color = Color.Red,
-                                topLeft = start,
-                                size = Size(end.x - start.x, end.y - start.y),
-                                style = Stroke(width = 3f)
-                            )
-                        }
-                    } else if (item.shape == Shape.StraightLine) {
-                        val radius = 20f
-                        val circleColor = Color.Red
-                        // Draw circles at each segment point
-                        item.segmentPoints.forEach { point ->
-                            drawCircle(
-                                color = circleColor,
-                                center = point,
-                                radius = radius,
-                                style = Stroke(width = 5f)
-                            )
-                        }
-                    }
+                    drawShapeCorners(item, 40f / zoom)
                 } else {
                     selectedItemIndex = -1
                 }

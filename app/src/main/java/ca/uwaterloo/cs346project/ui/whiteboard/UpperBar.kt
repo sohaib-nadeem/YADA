@@ -1,9 +1,8 @@
-package ca.uwaterloo.cs346project
+package ca.uwaterloo.cs346project.ui.whiteboard
 
 import android.app.Activity
 import android.content.Intent
 import android.graphics.BitmapFactory
-import android.util.Log
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
@@ -29,6 +28,17 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.unit.dp
+import ca.uwaterloo.cs346project.R
+import ca.uwaterloo.cs346project.client
+import ca.uwaterloo.cs346project.model.Action
+import ca.uwaterloo.cs346project.model.ActionType
+import ca.uwaterloo.cs346project.offline
+import ca.uwaterloo.cs346project.ui.home.makeToast
+import ca.uwaterloo.cs346project.ui.util.DrawnItem
+import ca.uwaterloo.cs346project.ui.util.PageType
+import ca.uwaterloo.cs346project.ui.util.createReversedAction
+import ca.uwaterloo.cs346project.ui.util.performRedo
+import ca.uwaterloo.cs346project.ui.util.performUndo
 import dev.shreyaspatil.capturable.controller.CaptureController
 import kotlinx.coroutines.launch
 import java.io.File
@@ -46,73 +56,13 @@ fun UpperBarIconButton(icon: ImageVector, color: Color, onClick: () -> Unit) {
         )
     }
 }
-fun applyAction(action: Action<DrawnItem>, drawnItems: MutableList<DrawnItem>) {
-    when (action.type) {
-        ActionType.ADD -> {
-            drawnItems.addAll(action.items)
-        }
-        ActionType.REMOVE -> {
-            action.items.forEach { actionItem -> drawnItems.removeAll { actionItem.userObjectId == it.userObjectId }  }
-        }
-        ActionType.MODIFY -> {
-            if (action.items.size != 2) {
-                throw IllegalArgumentException("ERROR: 'items' field does have 2 DrawnItem")
-            } else {
-                val index = drawnItems.indexOfFirst { it.userObjectId == action.items[0].userObjectId }
-                if (index != -1) {
-                    drawnItems[index] = action.items[1]
-                } else {
-                    throw NoSuchElementException("No element with the specified userObjectId found")
-                }
-            }
-        }
-    }
-}
-
-fun createReversedAction(action: Action<DrawnItem>): Action<DrawnItem> {
-    when (action.type) {
-        ActionType.ADD -> {
-            return Action(ActionType.REMOVE, action.items)
-        }
-        ActionType.REMOVE -> {
-            return Action(ActionType.ADD, action.items)
-        }
-        ActionType.MODIFY -> {
-            if (action.items.size != 2) {
-                throw IllegalArgumentException("ERROR: 'items' field does have 2 DrawnItem")
-            } else {
-                return Action(ActionType.MODIFY, listOf(action.items[1], action.items[0]))
-            }
-        }
-    }
-}
-
-
-fun performUndo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action<DrawnItem>>, redoStack: MutableList<Action<DrawnItem>>) {
-    undoStack.removeLastOrNull()?.let { lastAction ->
-        applyAction(createReversedAction(lastAction), drawnItems)
-        // Move the action to redoStack
-        redoStack.add(lastAction)
-    }
-}
-
-
-fun performRedo(drawnItems: MutableList<DrawnItem>, undoStack: MutableList<Action<DrawnItem>>, redoStack: MutableList<Action<DrawnItem>>) {
-    redoStack.removeLastOrNull()?.let { lastAction ->
-        applyAction(lastAction, drawnItems)
-        // Move the action back to undoStack
-        undoStack.add(lastAction)
-    }
-}
-
 
 @Composable
 fun UpperBar(
     drawnItems: SnapshotStateList<DrawnItem>,
     undoStack: MutableList<Action<DrawnItem>>,
     redoStack: MutableList<Action<DrawnItem>>,
-    page: Pg,
-    setPage: (Pg) -> Unit,
+    setPage: (PageType) -> Unit,
     captureController: CaptureController,
     setSelectedImage: (ImageBitmap) -> Unit
 ) {
@@ -156,7 +106,7 @@ fun UpperBar(
                         val sessionIdFile = File(context.filesDir, "session_id.txt")
                         sessionIdFile.writeText(client.session_id.toString())
                     }
-                    setPage(page.copy(curPage = CurrentPage.HomePage))
+                    setPage(PageType.HomePage)
                 }
                 Button(onClick = {}) {
                     if (offline) Text("Offline")
