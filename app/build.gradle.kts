@@ -87,4 +87,6 @@ dependencies {
     implementation("io.ktor:ktor-client-logging:$ktor_version")
     implementation("androidx.compose.ui:ui-util:1.3.0")
     implementation("androidx.constraintlayout:constraintlayout-compose:1.0.0")
+    testImplementation("io.ktor:ktor-client-mock:$ktor_version")
+
 }
