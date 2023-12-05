@@ -3,11 +3,15 @@
 ## Description
 YADA (Yet Another Drawing App) is an android app that allows multiple users to draw on a canvas together in real-time, making sharing ideas easier and more interactive.
 
-(Add screenshots)
-
 Significant features include:
-- (to be filled)
-
+- Drawing and erasing on the canvas, with different strokes width and colors
+- Clearing the entire canvas
+- Undo and Redo actions
+- Import an image and edit on it
+- Export the canvas as a pdf
+- Online sessions to collaborate with others in real-time 
+- Zoom and pan (drag) on the canvas
+- Draw shapes (rectangles, circles, and straight lines) and move them around
 
 ## Team Members
 Akshita Choudhury (a49choud@uwaterloo.ca),
