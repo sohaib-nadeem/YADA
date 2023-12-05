@@ -32,7 +32,6 @@ Sohaib Nadeem (s26nadee@uwaterloo.ca)
 - [Project Proposal](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Project-Proposal)
 - Meeting minutes: [Sprint 1](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-1-Meeting-Minutes), 
 [Sprint 2](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-2-Meeting-Minutes), [Sprint 3](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-3-Meeting-Minutes), [Sprint 4](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-4-Meeting-Minutes)
-- [Roadmap](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Roadmap)
 - [Requirements](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Requirements)
 - [Design document](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Architecture-and-Design)
 - [Reflections on practices](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Reflections-on-practices)
@@ -47,4 +46,4 @@ Thanks to:
 ## [License](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/LICENSE.txt)
 
 ## Project status
-See project [roadmap](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Roadmap) for planned features and current status. Development from the original team (under the Team Members section) is planned to stop on Dec 5, 2023. 
+See the Project Plan section in the [Project Proposal](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Project-Proposal) for planned features and current status. Development from the original team (under the Team Members section) is planned to stop on Dec 5, 2023.
