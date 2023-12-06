@@ -33,7 +33,7 @@ Sohaib Nadeem (s26nadee@uwaterloo.ca)
 - Meeting minutes: [Sprint 1](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-1-Meeting-Minutes), 
 [Sprint 2](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-2-Meeting-Minutes), [Sprint 3](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-3-Meeting-Minutes), [Sprint 4](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Sprint-4-Meeting-Minutes)
 - [Requirements](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Requirements)
-- [Design document](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Architecture-and-Design)
+- [Architecture & Design](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Architecture-and-Design)
 - [Reflections on practices](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Reflections-on-practices)
 - Software Releases and Installation Instructions  are mentioned above
 
