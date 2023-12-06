@@ -28,7 +28,6 @@ object SessionAction: IntIdTable(columnName = "actionId") {
 
     val actionType = uinteger("actionType")
 }
-// TODO: make object Id local to sessions (objectId should be a sequence but separate for each session)?
 
 // used to store the items in an Action<CanvasObject>
 //  segmentPoints stored in ObjectPoint table
@@ -41,9 +40,6 @@ object ActionObject: IntIdTable(columnName = "objectId") {
     val userObjectIdUser = integer("userObjectIdUser")
     val userObjectIdObject = integer("userObjectIdObject")
 }
-// TODO: add check for enum? (.check { it less CanvasObject.Shape.size} //(it eq 'R') or (it eq 'O') or (it eq 'L') or (it eq 'S')})
-// TODO: make object Id local to sessions (objectId should be a sequence but separate for each session)?
-// TODO: add ObjectSequenceNumber? (the index of object in the action; not a pKey, just an incrementing number)
 
 // used to store the segmentPoints in a CanvasObject
 object ObjectPoint: Table() {
@@ -53,9 +49,6 @@ object ObjectPoint: Table() {
     val xVal = float("xVal")
     val yVal = float("yVal")
 }
-// TODO: add index with object id and sequence number as key columns
-// TODO: make sequenceNumber auto increment/sequence?
-// TODO: add foreign key references for all tables where needed
 
 /************************ Domain Models ************************/
 
