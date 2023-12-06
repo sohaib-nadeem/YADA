@@ -26,7 +26,7 @@ Sohaib Nadeem (s26nadee@uwaterloo.ca)
 * version 0.2 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.2-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.2-build.apk))
 * version 0.3 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.3-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.3-build.apk))
 * version 0.4 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.4-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.4-build.apk))
-* version 1.0 (add links) (final release)
+* version 1.0 ([release notes](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v0.4-release-notes.md), [apk](https://git.uwaterloo.ca/s26nadee/cs346-project/-/blob/main/releases/v1.0-build.apk))
 
 ## Project Links
 - [Project Proposal](https://git.uwaterloo.ca/s26nadee/cs346-project/-/wikis/Project-Proposal)
