@@ -30,11 +30,6 @@ import org.jetbrains.exposed.sql.batchInsert
 
 
 class SessionService {
-    // TODO: change to suspend functions?
-    // TODO: need to handle failed queries! (in all methods)
-
-    // TODO: return session code as well
-    // TODO: make session code random
     fun createSession(): Int {
         println("${Thread.currentThread().name}")
 
@@ -52,7 +47,6 @@ class SessionService {
         return session_id
     }
 
-    // TODO: make user_id id global? (unique to each device)
     fun addUser(session_id: Int?): Int {
         println("${Thread.currentThread().name}")
 
@@ -115,7 +109,6 @@ class SessionService {
                     sequenceNumber++
                 }
             }
-            // TODO: is it possible to use batch insert into ActionObject as well?
 
             return@transaction 0
         }
@@ -135,7 +128,6 @@ class SessionService {
             // print sql to std-out
             addLogger(StdOutSqlLogger)
 
-            // TODO: check user is actually in session?
             var initialReceiveActionId = ActiveUser
                 .select() { ActiveUser.id eq user_id }
                 .single()[ActiveUser.initialReceiveActionId]
@@ -199,7 +191,6 @@ class SessionService {
                 // get only the objects from objectsWithIds
                 action.items = objectsWithIds.map { it.second }
             }
-            // TODO: is it possible optimize the above queries with a join?
 
             // update initialReceiveObjectId
             initialReceiveActionId = actionsToSendWithIds.maxOf { it.first } + 1
@@ -211,7 +202,6 @@ class SessionService {
             return@transaction actionsToSendWithIds
         }.map { it.second }
 
-        // TODO: remove
         if (actionsToSend.size > 0) {
             //println("initialReceiveObjectId is: ${initialReceiveActionId}")
             println("objectsToSend is not empty: ${actionsToSend}")
